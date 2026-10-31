@@ -62,8 +62,8 @@ function reactionsIn(p, idx, notInComment) {
 
 // The "48 bình luận · 5 lượt chia sẻ" line under a post. When the post's
 // action buttons are there but a count isn't, Facebook is showing 0.
-const COMMENTS_RE = /^(\d[\d.,]*(?:\s*(?:K|N|M|Tr))?)\s*(bình luận|comments?)$/iu;
-const SHARES_RE = /^(\d[\d.,]*(?:\s*(?:K|N|M|Tr))?)\s*(lượt chia sẻ|chia sẻ|shares?)$/iu;
+const COMMENTS_RE = /(\d[\d.,]*(?:\s*(?:K|N|M|Tr))?)\s*(bình luận|comments?)/iu;
+const SHARES_RE = /(\d[\d.,]*(?:\s*(?:K|N|M|Tr))?)\s*(lượt chia sẻ|chia sẻ|shares?)/iu;
 const ACTION_RE = /^(bình luận|comment|chia sẻ|share|thích|like)$/i;
 function footerCounts(p, notInComment) {
   let comments = "", shares = "", footer = false;

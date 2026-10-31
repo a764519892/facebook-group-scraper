@@ -41,6 +41,8 @@ class EndToEnd(unittest.TestCase):
         self.env = dict(os.environ, DATA_DIR=str(self.data), PYTHONIOENCODING="utf-8")
         self.feed_a = write_feed(self.data, "group_a", count=30, base_id=5000, group="a")
         self.feed_b = write_feed(self.data, "group_b", count=12, base_id=7000, group="b")
+        self.feed_photo = write_feed(
+            self.data, "group_photo", count=12, base_id=9000, group="photo", link_kind="photo")
         # An empty session is enough for local pages
         self.python("from secret_store import save_session; save_session({'cookies': [], 'origins': []})")
 
@@ -105,6 +107,15 @@ class EndToEnd(unittest.TestCase):
         self.assertIn("=== Batch 2", log)
         batch2 = log.split("=== Batch 2")[1]
         self.assertIn("0 already saved", batch2)  # no scrolling back past batch 1's posts
+
+    def test_post_id_from_photo_link(self):
+        status = self.scrape({"GROUPS": [self.feed_photo], "MAX_POSTS": 5})
+        self.assertEqual(status["state"], "done", status["message"])
+        posts = rows(self.files("group_photo") / "posts.csv")
+        self.assertEqual(len(posts), 5)
+        for p in posts:
+            self.assertRegex(p["post_id"], r"^\d+$")
+            self.assertFalse(p["post_id"].startswith("h_"))
 
     def test_each_group_gets_its_own_folder(self):
         status = self.scrape({"GROUPS": [self.feed_a, self.feed_b], "SCRAPE_ALL_GROUPS": True, "MAX_POSTS": 5},

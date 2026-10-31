@@ -6,6 +6,7 @@ import random
 import re
 import time
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 
 from playwright.sync_api import sync_playwright
 
@@ -13,14 +14,14 @@ from config import (
     AUTO_SCROLL_CAP, AUTO_SCROLL_LIMIT, BATCH_MODE, BATCH_POSTS, BATCH_REST_MIN, BATCH_TOTAL, BLOCK_MEDIA, COLLECT_REACTIONS, EXPAND_COMMENTS, EXPAND_REACTIONS,
     FAST_FORWARD, GROUP_PAUSE_MIN, GROUPS, SKIP_SEE_MORE_SAVED, STOP_FILE, HEADLESS, LOW_RISK_MODE, MAX_COMMENTS_PER_POST, MAX_DELAY, MAX_IDLE_SCROLLS,
     MAX_POSTS, MIN_DELAY, RECYCLE_MB, SCRAPE_ALL_GROUPS, SCROLL_LIMIT, SELECTED_GROUP, SORT_CHRONOLOGICAL,
-    UPDATE_SAVED, UPDATE_SAVED_CLICKS, GroupFiles, group_slug,
+    UPDATE_SAVED, UPDATE_SAVED_CLICKS, GroupFiles, effective_settings, group_slug,
 )
 import reactions
 from secret_store import VaultError, load_session
 from utils import (
-    anonymize, clean_saved_files, describe_migration, launch_browser, load_existing_ids, load_saved_engagement, log_message,
-    migrate_legacy_data, privacy_warnings, record_checkpoint, save_comments_to_csv, save_posts_to_csv, save_reactions_to_csv,
-    update_comment_texts, update_reactions_csv, write_status,
+    RunLock, anonymize, clean_saved_files, describe_migration, launch_browser, load_existing_ids, load_saved_engagement,
+    log_message, migrate_legacy_data, privacy_warnings, read_rows, record_checkpoint, save_comments_to_csv,
+    save_posts_to_csv, save_reactions_to_csv, update_comment_texts, update_post_urls, update_reactions_csv, write_status,
 )
 
 SEE_MORE = re.compile(r"^\s*(See more|Xem thêm)\s*$")
@@ -95,11 +96,52 @@ EXTRACT_JS = r"""
       .filter(a => !a.parentElement.closest("div[role='article']"));
   }
 
+  // A post's permalink is usually the timestamp anchor, but some Facebook
+  // layouts render it as a photo/feedback link instead. Pull the numeric post
+  // id from every shape we know about, so "Open original post" still works.
+  function idFromHref(href) {
+    let m = href.match(/\/(?:posts|permalink)\/(\d+)/);
+    if (m) return m[1];
+    m = href.match(/[?&](?:story_fbid|multi_permalinks)=(\d+)/);
+    if (m) return m[1];
+    m = href.match(/[?&]set=(?:gm|pcb)\.(\d+)/);
+    if (m) return m[1];
+    return null;
+  }
+  function idFromAttrs(root) {
+    for (const e of root.querySelectorAll("[data-ft], [id^='pcb.'], [id^='post_']")) {
+      if (!notInComment(e, root)) continue;
+      const id = e.getAttribute("id") || "";
+      let m = id.match(/^(?:pcb|post_)(\d+)/);
+      if (m) return m[1];
+      const ft = e.getAttribute("data-ft");
+      if (!ft) continue;
+      try {
+        const j = JSON.parse(ft.replace(/&quot;/g, '"'));
+        const v = j.top_level_post_id || j.tl_objid || j.mf_story_key;
+        if (v && /^\d+$/.test(String(v))) return String(v);
+      } catch (e) {}
+    }
+    return null;
+  }
+
   return posts.map((p, idx) => {
     p.setAttribute("data-fbs-idx", idx);
 
-    const link = p.querySelector("a[href*='/posts/'], a[href*='/permalink/']");
-    const match = link && link.href.match(/\/(?:posts|permalink)\/(\d+)/);
+    const anchors = Array.from(p.querySelectorAll("a[href]"))
+      .filter(a => notInComment(a, p));
+    const postLink = anchors.find(a => /\/(?:posts|permalink)\/\d+/.test(a.href));
+    let postId = postLink ? postLink.href.match(/\/(?:posts|permalink)\/(\d+)/)[1] : null;
+    if (!postId) {
+      for (const a of anchors) {
+        const hit = idFromHref(a.href);
+        if (hit) { postId = hit; break; }
+      }
+    }
+    if (!postId) postId = idFromAttrs(p);
+    const timeLink = postLink || anchors.find(a =>
+      /^(\d|hôm qua|yesterday|just now|vừa xong)/i.test(
+        (a.getAttribute("aria-label") || a.innerText || "").trim()));
 
     const authorEl = p.querySelector("h2 a, h3 a, h2 strong, h3 strong");
 
@@ -122,9 +164,10 @@ EXTRACT_JS = r"""
 
     return {
       idx,
-      post_id: match ? match[1] : null,
+      post_id: postId,
+      post_url: postLink ? postLink.href : "",
       author: authorEl ? authorEl.innerText.trim() : "",
-      time_text: link ? (link.getAttribute("aria-label") || link.innerText).trim() : "",
+      time_text: timeLink ? (timeLink.getAttribute("aria-label") || timeLink.innerText).trim() : "",
       text: cleanText(text),
       comments: max > 0 ? commentsIn(p, max) : [],
       has_more_comments: !!moreBtn,
@@ -303,7 +346,8 @@ BLOCK_TEXT = re.compile(
 
 def blocked(page):
     """Login/checkpoint/2FA page, or a "you're temporarily blocked" style notice."""
-    if any(part in page.url for part in ("/checkpoint", "/login", "/two_step_verification")):
+    path = urlparse(page.url or "").path.lower()
+    if re.match(r"^/(login|checkpoint|two_step_verification|recover)(/|\.php$|$)", path):
         return True
     try:
         notices = page.locator("div[role='dialog'], div[role='alert']").all_inner_texts()
@@ -399,7 +443,15 @@ def wait(seconds, status, message, state="running"):
 
 
 def post_key(post):
-    return post["post_id"] or "h_" + hashlib.sha256(post["text"].encode("utf-8")).hexdigest()[:16]
+    if post.get("post_id"):
+        return str(post["post_id"])
+    seed = "\x1f".join((post.get("author", ""), post.get("time_text", ""), post.get("text", "")))
+    return "h_" + hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16]
+
+
+def _text_fingerprint(text):
+    """Normalised post text, used to match old hash-keyed rows to their real id."""
+    return re.sub(r"\s+", " ", text or "").strip()
 
 
 class GroupRun:
@@ -413,6 +465,18 @@ class GroupRun:
             log_message(f"Removed 'Xem thêm'/'Ẩn bớt' button text from {n} rows of {name} (backup: {name}.bak)")
         self.seen = load_existing_ids(files)
         self.saved_before = set(self.seen)
+        # Older rows were saved under a content hash because the feed wouldn't
+        # give us the numeric post id. Match those rows to the numeric id now
+        # that extraction can find it, so we can fill in their original URL
+        # without duplicating them.
+        self.legacy_index = {}
+        for row in read_rows(files.posts):
+            old_id = row.get("post_id", "")
+            text = _text_fingerprint(row.get("text", ""))
+            if old_id.startswith("h_") and len(text) >= 20:
+                self.legacy_index.setdefault((row.get("author", ""), text), old_id)
+        self.legacy_alias = {}
+        self.urls_filled = 0
         log_message(f"{len(self.seen)} posts already saved for {files.slug}, they will be skipped")
         self.url = files.url.rstrip("/")
         if SORT_CHRONOLOGICAL and self.url.startswith("http"):
@@ -445,10 +509,35 @@ class GroupRun:
             self.feed.close()
             self.feed = None
 
+    def resolve_key(self, post):
+        """Return the saved row id for this post, bridging old hash ids.
+
+        A post that used to be stored as h_<hash> keeps that id, but we now
+        know its numeric Facebook id, so we can write its real post_url.
+        """
+        numeric = str(post.get("post_id") or "")
+        if not numeric.isdigit():
+            return post_key(post)
+        alias = self.legacy_alias.get(numeric)
+        if alias:
+            if (self.files.url or "").startswith("http"):
+                post["post_url"] = f"{self.files.url.rstrip('/')}/posts/{numeric}"
+            return alias
+        fingerprint = (anonymize(post.get("author", "")), _text_fingerprint(post.get("text", "")))
+        old_id = self.legacy_index.get(fingerprint) if len(fingerprint[1]) >= 20 else None
+        if old_id:
+            self.legacy_alias[numeric] = old_id
+            if (self.files.url or "").startswith("http"):
+                post["post_url"] = f"{self.files.url.rstrip('/')}/posts/{numeric}"
+                self.urls_filled += 1
+            return old_id
+        return numeric
+
     def summary(self, reason):
+        links = f", filled {self.urls_filled} original-post links" if self.urls_filled else ""
         return (f"{reason}. Saved {self.new} new posts and {self.comments} comments "
                 f"(scrolled past {self.skipped} already saved"
-                + (f", updated {self.updated} of them" if UPDATE_SAVED else "") + ").")
+                + (f", updated {self.updated} of them" if UPDATE_SAVED else "") + links + ").")
 
     def run_batch(self, want):
         """Scroll until `want` new posts are saved. Returns (state, reason, new posts).
@@ -456,6 +545,7 @@ class GroupRun:
         state "more" means the group can continue later; "done", "blocked",
         "error" and "stopped" mean it can't.
         """
+        files = self.files
         if self.feed is None:
             problem = self.open()
             if problem:
@@ -493,7 +583,7 @@ class GroupRun:
                     break
                 if not post["text"] and not post["post_id"]:
                     continue
-                key = post_key(post)
+                key = self.resolve_key(post)
                 if key not in self.since_open:
                     self.since_open.add(key)
                     fresh += 1
@@ -504,6 +594,11 @@ class GroupRun:
                     if key in self.seen:
                         skipped += 1
                 if key in self.seen:
+                    post_url = post.get("post_url") or (
+                        f"{files.url.rstrip('/')}/posts/{key}"
+                        if str(key).isdigit() and (files.url or "").startswith("http") else "")
+                    if post_url:
+                        update_post_urls(files, {key: post_url})
                     if UPDATE_SAVED and key in self.saved_before and key not in self.refreshed:
                         self.refreshed.add(key)
                         row, new_comments, completed = refresh_saved_post(
@@ -533,7 +628,9 @@ class GroupRun:
                     })
                 batch.append({
                     "post_id": key, "author": anonymize(post["author"]),
-                    "time_text": post["time_text"], "text": post["text"], "scraped_at": now,
+                    "time_text": post["time_text"], "text": post["text"],
+                    "post_url": post.get("post_url") or (f"{files.url.rstrip('/')}/posts/{key}" if str(key).isdigit() and (files.url or '').startswith('http') else ""),
+                    "scraped_at": now,
                 })
 
             # Save every scroll so nothing is lost if the run stops early
@@ -624,7 +721,7 @@ class GroupRun:
         for _ in range(3):
             wanted = []
             for p in posts:
-                key = post_key(p)
+                key = self.resolve_key(p)
                 if not (p["text"] or p["post_id"]) or key in tried or not self.needs_full_text(key):
                     continue
                 if key not in self.seen:  # a post we'd save: only as many as this batch still needs
@@ -635,7 +732,7 @@ class GroupRun:
             if not wanted:
                 break
             for p in wanted:
-                tried.add(post_key(p))
+                tried.add(self.resolve_key(p))
                 expand_see_more(page, f"[data-fbs-idx='{p['idx']}']")
             posts = page.evaluate(EXTRACT_JS, args)
         return posts
@@ -671,11 +768,22 @@ def scrape_posts():
             os.remove(STOP_FILE)
 
     write_status(status)
+    lock = RunLock()
+    if not lock.acquire():
+        message = "Another scrape is already running (dashboard or terminal)."
+        status.update(state="error", message=message, next_batch_at="")
+        write_status(status)
+        log_message(message)
+        return
     try:
-        _scrape(groups, status, finish)
-    except Exception as e:
-        finish("error", f"Crashed: {e}")
-        raise
+        write_status(status)
+        try:
+            _scrape(groups, status, finish)
+        except Exception as e:
+            finish("error", f"Crashed: {e}")
+            raise
+    finally:
+        lock.release()
 
 
 def _scrape(groups, status, finish):
@@ -709,6 +817,14 @@ def _scrape(groups, status, finish):
         runs = []
         try:
             state, message = (run_batches if BATCH_MODE else run_once)(context, groups, status, runs)
+            if state in ("done", "more") and effective_settings().get("AUTO_REPLY"):
+                try:
+                    import outreach
+                    result = outreach.run(context, effective_settings(), status, wait_fn=wait)
+                    message += f" 自动回复：发送 {result.get('sent', 0)} 条。"
+                except Exception as e:  # never fail the scrape because of outreach
+                    log_message(f"Auto-reply failed: {e}")
+                    message += " 自动回复失败，详见日志。"
         finally:
             for run in runs:
                 run.close()
@@ -719,7 +835,9 @@ def _scrape(groups, status, finish):
 def describe_runs(runs, groups, reason):
     if len(groups) == 1 and runs:
         return runs[0].summary(reason)
-    parts = "; ".join(f"{r.files.slug}: {r.new} new posts" for r in runs)
+    parts = "; ".join(
+        f"{r.files.slug}: {r.new} new posts" + (f" ({r.ended[1]})" if r.ended else "")
+        for r in runs)
     return f"{reason}. {len(runs)}/{len(groups)} groups: {parts}."
 
 
@@ -735,6 +853,7 @@ def run_once(context, groups, status, runs):
         state, reason, _ = run.run_batch(MAX_POSTS)
         run.close()
         state = "done" if state == "more" else state
+        run.ended = (state, reason)
         results.append((run.files.slug, state, run.summary(reason)))
         if state in ("blocked", "stopped"):
             break  # the account is being challenged, or you asked to stop
@@ -746,7 +865,8 @@ def run_once(context, groups, status, runs):
                 break
     if len(results) == 1:
         return results[0][1], results[0][2]
-    final = next((s for _, s, _ in results if s in ("blocked", "stopped")), "done")
+    states = {s for _, s, _ in results if s}
+    final = next((s for s in ("blocked", "stopped", "error") if s in states), "done")
     return final, f"{len(results)}/{len(groups)} groups. " + "; ".join(f"{g}: {m}" for g, m in
                                                                      ((g, m) for g, _, m in results) if g)
 
@@ -784,9 +904,11 @@ def run_batches(context, groups, status, runs):
                 if not wait(pause, status, "Pausing before the next group"):
                     return "stopped", describe_runs(runs, groups, "Stopped from the dashboard")
         if total >= BATCH_TOTAL:
-            return "done", describe_runs(runs, groups, f"Reached {BATCH_TOTAL} new posts in total")
+            final = "error" if any(r.ended and r.ended[0] == "error" for r in runs) else "done"
+            return final, describe_runs(runs, groups, f"Reached {BATCH_TOTAL} new posts in total")
         if not active:
-            return "done", describe_runs(runs, groups, "Every group's feed ran out")
+            final = "error" if any(r.ended and r.ended[0] == "error" for r in runs) else "done"
+            return final, describe_runs(runs, groups, "Every group's feed ran out")
         rest = BATCH_REST_MIN * 60 * random.uniform(0.9, 1.1)
         until = (datetime.now() + timedelta(seconds=rest)).strftime("%H:%M")
         message = f"Batch {batch_no} done ({total}/{BATCH_TOTAL} new posts). Resting until {until}, page kept open."

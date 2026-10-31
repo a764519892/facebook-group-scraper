@@ -20,6 +20,7 @@ import socket
 import subprocess
 import sys
 import time
+from urllib.parse import urlparse
 
 from playwright.sync_api import sync_playwright
 
@@ -47,8 +48,8 @@ def wait_for_login(get_state, current_url):
         state = get_state()
         if logged_in(state):
             return state
-        print(f"Not logged in yet. The browser is on: {current_url()}")
-        print("Complete the step shown there, then press Enter again.")
+        print(f"未登录：浏览器当前在 {current_url()}")
+        print("请完成页面提示的步骤，再按回车。")
 
 
 def free_port():
@@ -57,7 +58,7 @@ def free_port():
         return s.getsockname()[1]
 
 
-def browser_login(autofill=None, should_stop=lambda: False, on_status=print, timeout=900):
+def browser_login(autofill=None, should_stop=lambda: False, on_status=print, timeout=900, url=LOGIN_URL):
     """Open a normal browser window on the login page and wait until you're logged in.
 
     autofill: optional (email, password) typed into the login form for you; you
@@ -71,10 +72,10 @@ def browser_login(autofill=None, should_stop=lambda: False, on_status=print, tim
     shutil.rmtree(profile, ignore_errors=True)
     port = free_port()
 
-    on_status(f"Opening {os.path.basename(exe)}…")
+    on_status(f"正在打开 {os.path.basename(exe)}…")
     proc = subprocess.Popen([
         exe, f"--user-data-dir={profile}", f"--remote-debugging-port={port}",
-        "--remote-debugging-address=127.0.0.1", "--no-first-run", "--no-default-browser-check", LOGIN_URL,
+        "--remote-debugging-address=127.0.0.1", "--no-first-run", "--no-default-browser-check", url,
     ])
     state = None
     try:
@@ -87,20 +88,24 @@ def browser_login(autofill=None, should_stop=lambda: False, on_status=print, tim
                 except Exception:
                     time.sleep(0.5)
             if browser is None:
-                raise RuntimeError("Couldn't connect to the browser window. Close other windows of it and retry.")
+                raise RuntimeError("无法连接到浏览器窗口。请关闭其它浏览器窗口后重试。")
             context = browser.contexts[0]
 
             if autofill:
-                fill_login_form(context, *autofill)
-            autofill = None  # don't keep the password around
+                host = (urlparse(url).hostname or "").lower()
+                if host == "facebook.com" or host.endswith(".facebook.com"):
+                    fill_login_form(context, *autofill)
+                else:
+                    on_status("已保存的账号只会自动填入 facebook.com；请手动登录。")
+                autofill = None  # don't keep the password around
 
             last, deadline = None, time.time() + timeout
             while time.time() < deadline:
                 if should_stop():
-                    on_status("Cancelled.")
+                    on_status("已取消。")
                     break
                 if not browser.is_connected():
-                    raise RuntimeError("The login window was closed before the login finished.")
+                    raise RuntimeError("登录完成前浏览器窗口已关闭。")
                 try:
                     current = facebook_only(context.storage_state())
                     url = context.pages[-1].url if context.pages else ""
@@ -108,17 +113,17 @@ def browser_login(autofill=None, should_stop=lambda: False, on_status=print, tim
                     raise RuntimeError("The login window was closed before the login finished.") from None
                 if logged_in(current) and not any(p_ in url for p_ in CHALLENGE_PATHS):
                     state = current
-                    on_status("Logged in.")
+                    on_status("已登录。")
                     break
-                message = ("Waiting for you to finish the security check / 2FA in the login window…"
+                message = ("正在等待你在登录窗口完成安全验证/2FA…"
                            if any(p_ in url for p_ in CHALLENGE_PATHS[1:])
-                           else "Waiting for you to log in in the window…")
+                           else "正在等待你在窗口里登录…")
                 if message != last:
                     on_status(message)
                     last = message
                 time.sleep(2)
             else:
-                on_status("Timed out waiting for the login.")
+                on_status("等待登录超时。")
             try:
                 browser.new_browser_cdp_session().send("Browser.close")
             except Exception:
@@ -152,16 +157,22 @@ def fill_login_form(context, email, password):
 def login_with_normal_browser(url=LOGIN_URL):
     """Terminal version: prints progress; Ctrl+C to give up."""
     try:
-        return browser_login()
+        return browser_login(url=url)
     except KeyboardInterrupt:
         return None
 
 
 def facebook_only(state):
     """Drop other sites' cookies (e.g. Edge signs in to your Microsoft account by itself)."""
+    domain = SESSION_DOMAIN.lstrip(".").lower()
+
+    def allowed(value):
+        value = (value or "").lstrip(".").lower()
+        return value == domain or value.endswith("." + domain)
+
     return {
-        "cookies": [c for c in state["cookies"] if c["domain"].lstrip(".").endswith(SESSION_DOMAIN)],
-        "origins": [o for o in state["origins"] if SESSION_DOMAIN in o["origin"]],
+        "cookies": [c for c in state["cookies"] if allowed(c["domain"])],
+        "origins": [o for o in state["origins"] if allowed(urlparse(o["origin"]).hostname)],
     }
 
 
@@ -181,9 +192,9 @@ def login_with_playwright():
                 page.fill("input[name='email']", email)
                 page.fill("input[name='pass']", password)
                 page.keyboard.press("Enter")
-                print("Filled in stored credentials.")
+                print("已填写保存的账号密码。")
             except Exception:
-                print("Couldn't find the login form; please log in by hand.")
+                print("找不到登录表单，请手动登录。")
         del password
 
         state = wait_for_login(context.storage_state, lambda: page.url)
@@ -200,8 +211,8 @@ if __name__ == "__main__":
         else:
             state = login_with_normal_browser()
         if state is None:
-            sys.exit("Not saved.")
+            sys.exit("未保存。")
         save_session(state)
-        print("Session saved to the encrypted vault.")
+        print("会话已保存到加密密码库。")
     except (VaultError, RuntimeError) as e:
         sys.exit(str(e))

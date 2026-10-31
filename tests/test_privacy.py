@@ -36,7 +36,7 @@ class Warnings(unittest.TestCase):
 
     def test_hashing_off(self):
         with mock.patch.object(utils, "ANONYMIZE", False):
-            self.assertIn("NOT hashed", utils.privacy_warnings()[0])
+            self.assertIn("未哈希", utils.privacy_warnings()[0])
 
 
 if __name__ == "__main__":

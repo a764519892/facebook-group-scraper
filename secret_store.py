@@ -24,10 +24,12 @@ from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
 from config import VAULT_FILE
+from utils import restrict_private_file
 
 PASSPHRASE_ENV = "SCRAPER_PASSPHRASE"
 _SALT_LEN = 16
 _passphrase = None  # cached for the life of the process
+_session_cache = None  # (vault mtime, has cookies), avoids scrypt every 2 s
 
 
 class VaultError(Exception):
@@ -51,12 +53,12 @@ def get_passphrase(confirm=False):
     passphrase = os.getenv(PASSPHRASE_ENV)
     if not passphrase:
         if not sys.stdin.isatty():
-            raise VaultError(f"No passphrase: set {PASSPHRASE_ENV} or run in a terminal.")
+            raise VaultError(f"没有密码：请设置 {PASSPHRASE_ENV}，或在终端运行。")
         passphrase = getpass("Vault passphrase (hidden): ")
         if confirm and getpass("Repeat passphrase: ") != passphrase:
-            raise VaultError("Passphrases don't match.")
+            raise VaultError("两次输入的密码不一致。")
     if len(passphrase) < 8:
-        raise VaultError("Passphrase must be at least 8 characters.")
+        raise VaultError("密码至少 8 个字符。")
     _passphrase = passphrase
     return passphrase
 
@@ -69,7 +71,7 @@ def set_passphrase(passphrase):
     """
     global _passphrase
     if len(passphrase or "") < 8:
-        raise VaultError("Passphrase must be at least 8 characters.")
+        raise VaultError("密码至少 8 个字符。")
     if vault_exists():
         _read(passphrase)  # raises if wrong
     _passphrase = passphrase
@@ -86,7 +88,7 @@ def _read(passphrase):
     try:
         return json.loads(Fernet(_derive_key(passphrase, salt)).decrypt(token))
     except (InvalidToken, InvalidKey, ValueError):
-        raise VaultError("Wrong passphrase, or the vault file is damaged.") from None
+        raise VaultError("密码错误，或密码库文件已损坏。") from None
 
 
 def _write(data, passphrase):
@@ -96,10 +98,7 @@ def _write(data, passphrase):
     with open(tmp, "wb") as f:
         f.write(salt + token)
     os.replace(tmp, VAULT_FILE)
-    try:
-        os.chmod(VAULT_FILE, 0o600)  # owner-only on macOS/Linux; no-op on Windows
-    except OSError:
-        pass
+    restrict_private_file(VAULT_FILE)
 
 
 def load_vault():
@@ -168,6 +167,22 @@ def account_info():
 def has_session():
     # Only checks the file; reading the session needs the passphrase
     return vault_exists()
+
+
+def has_saved_session():
+    """True only when the vault is unlocked and actually holds login cookies."""
+    global _session_cache
+    if not vault_exists() or not is_unlocked():
+        return False
+    try:
+        stamp = os.path.getmtime(VAULT_FILE)
+        if _session_cache and _session_cache[0] == stamp:
+            return _session_cache[1]
+        value = bool((load_vault().get("session") or {}).get("cookies"))
+        _session_cache = (stamp, value)
+        return value
+    except (OSError, VaultError):
+        return False
 
 
 def delete_vault():

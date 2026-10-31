@@ -4,11 +4,13 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 from datetime import datetime
 
 from config import (
-    ANONYMIZE, BROWSER_CHANNEL, CHECKPOINT_FILE, DATA_DIR, GROUPS, HASH_SALT, LOG_FILE, STATUS_FILE, GroupFiles,
+    ANONYMIZE, BROWSER_CHANNEL, CHECKPOINT_FILE, DATA_DIR, GROUPS, HASH_SALT, LOG_FILE, RUN_LOCK_FILE,
+    STATUS_FILE, GroupFiles,
 )
 from reactions import TYPES as REACTION_TYPES
 
@@ -19,12 +21,51 @@ for stream in (sys.stdout, sys.stderr):
     except (AttributeError, ValueError):
         pass
 
-FIELDS = ["post_id", "author", "time_text", "text", "scraped_at"]
+FIELDS = ["post_id", "author", "time_text", "text", "post_url", "scraped_at"]
 COMMENT_FIELDS = ["post_id", "comment_index", "author", "text", "scraped_at"]
 # updated_at: when "update saved posts" last refreshed the row (empty = never)
 # comment_count / share_count: the post's real totals from Facebook (empty = unknown)
 REACTION_FIELDS = ["post_id", "total", *REACTION_TYPES, "comment_count", "share_count",
                    "source", "scraped_at", "updated_at"]
+
+# A cell starting with one of these is executed as a formula by Excel/Sheets.
+# Prefix it with an apostrophe when writing, and remove that apostrophe when
+# reading so the dashboard still shows the original text.
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def csv_safe(value):
+    if isinstance(value, str) and value.startswith(_FORMULA_PREFIXES):
+        return "'" + value
+    return value
+
+
+def csv_unescape(value):
+    if isinstance(value, str) and len(value) > 1 and value[0] == "'" and value[1] in _FORMULA_PREFIXES:
+        return value[1:]
+    return value
+
+
+def restrict_private_file(path):
+    """Best effort: make a file readable only by its owner.
+
+    POSIX has real mode bits. On Windows, inherited ACLs on some folders let
+    every local user read the file, so remove inheritance and grant the current
+    user full control. Failures are ignored: the file is still encrypted or
+    contains only non-secret settings.
+    """
+    try:
+        if os.name != "nt":
+            os.chmod(path, 0o600)
+            return
+        user = os.environ.get("USERNAME") or os.environ.get("USER") or ""
+        if not user:
+            return
+        subprocess.run(["icacls", path, "/inheritance:r", "/grant:r", f"{user}:F"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                       check=False, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        pass
 
 
 # Flags that cut memory without changing what pages see: no sound, no video
@@ -113,12 +154,9 @@ PLACEHOLDER_SALTS = {"", "change-me", "pick-any-random-string", "your-secret-sal
 def privacy_warnings():
     """Reasons author names aren't properly protected (empty list = fine)."""
     if not ANONYMIZE:
-        return ["Author names are NOT hashed: real names are being saved. Turn 'Hash author names' "
-                "back on unless the people in the group agreed to this."]
+        return ["作者姓名未哈希：会保存真实姓名。只有在对方同意时才关闭。"]
     if HASH_SALT.strip() in PLACEHOLDER_SALTS or len(HASH_SALT.strip()) < 8:
-        return ["HASH_SALT is a placeholder or too short, so hashed names could be guessed. "
-                "Put a long random value in .env (e.g. python -c \"import secrets; print(secrets.token_hex(16))\") "
-                "before collecting data, and keep it private."]
+        return ["HASH_SALT 是占位值或太短，哈希后的姓名可能被猜出。请在收集数据前在 .env 中设置一个长随机值，并妥善保管。"]
     return []
 
 
@@ -175,11 +213,122 @@ def write_status(status):
     os.replace(tmp, STATUS_FILE)
 
 
+class RunLock:
+    """Cross-process "only one scrape at a time" lock.
+
+    Uses an OS file lock, so it is released automatically even if the process
+    crashes. The file is in data/run.lock and is safe to leave behind.
+    """
+
+    def __init__(self, path=RUN_LOCK_FILE):
+        self.path = path
+        self.file = None
+
+    def acquire(self):
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        try:
+            try:
+                f = open(self.path, "r+b")
+            except FileNotFoundError:
+                f = open(self.path, "w+b")
+        except OSError:
+            return False
+        try:
+            if os.name == "nt":
+                import msvcrt
+                f.seek(0)
+                msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            f.close()
+            return False
+        f.seek(0)
+        f.truncate()
+        f.write(f"pid={os.getpid()} at={datetime.now().isoformat(timespec='seconds')}\n".encode("utf-8"))
+        f.flush()
+        self.file = f
+        return True
+
+    def release(self):
+        f, self.file = self.file, None
+        if not f:
+            return
+        try:
+            if os.name == "nt":
+                import msvcrt
+                f.seek(0)
+                msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        except OSError:
+            pass
+        finally:
+            f.close()
+
+    def __enter__(self):
+        if not self.acquire():
+            raise RuntimeError("Another scrape is already running")
+        return self
+
+    def __exit__(self, *exc):
+        self.release()
+
+
+def run_lock_is_held(path=RUN_LOCK_FILE):
+    """True if another process currently holds the scrape lock."""
+    lock = RunLock(path)
+    if not lock.acquire():
+        return True
+    lock.release()
+    return False
+
+
+def backfill_post_urls(files):
+    """Fill post_url for older CSV rows that predate the column."""
+    if not os.path.isfile(files.posts):
+        return 0
+    rows = read_rows(files.posts)
+    changed = 0
+    for row in rows:
+        if (row.get("post_url") or "").strip():
+            continue
+        pid = (row.get("post_id") or "").strip()
+        if pid.isdigit() and (files.url or "").startswith("http"):
+            row["post_url"] = files.url.rstrip("/") + "/posts/" + pid
+            changed += 1
+    if changed:
+        _write_rows(files.posts, FIELDS, rows)
+    return changed
+
+
+def update_post_urls(files, updates):
+    """Fill missing post_url values for posts that were saved earlier."""
+    if not updates or not os.path.isfile(files.posts):
+        return 0
+    rows = read_rows(files.posts)
+    changed = 0
+    for row in rows:
+        pid = row.get("post_id")
+        if pid in updates and not (row.get("post_url") or "").strip():
+            row["post_url"] = updates[pid]
+            changed += 1
+    if changed:
+        _write_rows(files.posts, FIELDS, rows)
+    return changed
+    if not os.path.isfile(path):
+        return []
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        return [{k: csv_unescape(v) for k, v in row.items()} for row in csv.DictReader(f)]
+
+
 def read_rows(path):
     if not os.path.isfile(path):
         return []
     with open(path, newline="", encoding="utf-8-sig") as f:
-        return list(csv.DictReader(f))
+        return [{k: csv_unescape(v) for k, v in row.items()} for row in csv.DictReader(f)]
 
 
 def _write_rows(path, fields, rows):
@@ -188,7 +337,7 @@ def _write_rows(path, fields, rows):
     with open(tmp, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows([{k: csv_safe(v) for k, v in row.items()} for row in rows])
     os.replace(tmp, path)
 
 
@@ -198,7 +347,9 @@ def _ensure_header(path, fields):
         return
     with open(path, newline="", encoding="utf-8-sig") as f:
         header = next(csv.reader(f), None)
-    if header and header != fields:
+    if not header:
+        return
+    if header != fields:
         _write_rows(path, fields, read_rows(path))
 
 
@@ -207,14 +358,16 @@ def _append_csv(path, fields, rows):
         return
     os.makedirs(os.path.dirname(path), exist_ok=True)
     _ensure_header(path, fields)
-    file_exists = os.path.isfile(path)
+    # An existing but empty file still needs its header (older versions wrote
+    # a data row into an empty file, which made read_csv/DictReader return []).
+    file_exists = os.path.isfile(path) and os.path.getsize(path) > 0
 
     # utf-8-sig so Excel shows Vietnamese characters correctly
     with open(path, "a", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         if not file_exists:
             writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows([{k: csv_safe(v) for k, v in row.items()} for row in rows])
 
 
 def record_checkpoint(message):

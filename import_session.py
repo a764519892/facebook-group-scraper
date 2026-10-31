@@ -20,7 +20,8 @@ SAME_SITE = {"no_restriction": "None", "none": "None", "lax": "Lax", "strict": "
 
 
 def is_facebook(domain):
-    return domain.lstrip(".").endswith("facebook.com")
+    domain = (domain or "").lstrip(".").lower()
+    return domain == "facebook.com" or domain.endswith(".facebook.com")
 
 
 def cookie(name, value, domain=".facebook.com", path="/", expires=-1,

@@ -116,6 +116,8 @@
   button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 16px color-mix(in srgb, var(--c1) 40%, transparent); }
   button:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
   button.secondary { background: var(--surface); color: var(--text-primary); border-color: var(--border); box-shadow: none; }
+  a.btn { text-decoration: none; }
+  .btn.secondary { background: var(--surface); color: var(--text-primary); border-color: var(--border); box-shadow: none; }
   button.linkish { background: none; border: none; box-shadow: none; color: var(--c1); padding: 0; }
   button:focus-visible, input:focus-visible, select:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
     outline: 2px solid var(--c1); outline-offset: 2px;
@@ -270,6 +272,12 @@
   .post { border-left: 4px solid var(--accent, var(--c1)); }
   .post-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 12.5px; color: var(--text-muted); margin-bottom: 8px; }
   .updated-tag { font-size: 11.5px; color: var(--c3); font-weight: 600; }
+  .scraped-tag { font-size: 11.5px; color: var(--text-muted); }
+  .post.reviewed { opacity: .55; }
+  .post.reviewed:hover { opacity: .9; }
+  .reviewed-tag { font-size: 11px; font-weight: 750; color: var(--c5); padding: 1px 8px;
+    border: 1px solid color-mix(in srgb, var(--c5) 55%, var(--border)); border-radius: 999px;
+    background: color-mix(in srgb, var(--c5) 12%, var(--surface)); }
   .author-chip { font-family: var(--mono); font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary); }
   .post-text { white-space: pre-line; word-break: break-word; }
   .post-text.clamp { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
@@ -284,6 +292,39 @@
   .comment { padding: 8px 12px; margin-top: 8px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); }
   .comment .author-chip { margin-right: 6px; }
   .more-row { text-align: center; margin-top: 14px; }
+
+  /* Opportunities / demand tab */
+  .opp-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .opp-controls select { width: auto; }
+  .opp-controls .search { min-width: 260px; }
+  .opp-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .opp-tag { font-size: 11.5px; font-weight: 650; padding: 2px 8px; border-radius: 999px;
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary); }
+  .opp-tag.demand { color: var(--c2); border-color: color-mix(in srgb, var(--c2) 45%, var(--border));
+    background: color-mix(in srgb, var(--c2) 10%, var(--surface)); }
+  .opp-tag.lead { color: var(--c5); border-color: color-mix(in srgb, var(--c5) 55%, var(--border));
+    background: color-mix(in srgb, var(--c5) 14%, var(--surface)); font-weight: 750; }
+  .opp-tag.seller { color: var(--text-secondary); border-color: var(--border);
+    background: var(--surface-2); }
+  .opp-tag.hot { color: var(--c8); border-color: color-mix(in srgb, var(--c8) 45%, var(--border));
+    background: color-mix(in srgb, var(--c8) 10%, var(--surface)); }
+  .opp-tag.discussed { color: var(--c3); border-color: color-mix(in srgb, var(--c3) 45%, var(--border));
+    background: color-mix(in srgb, var(--c3) 10%, var(--surface)); }
+  .opp-tag.fresh { color: var(--c6); border-color: color-mix(in srgb, var(--c6) 45%, var(--border)); }
+  .opp-score { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--text-secondary); font-size: 12px; }
+  .opp-score strong { color: var(--text-primary); font-size: 16px; }
+  .opp-match { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+  .opp-match b { color: var(--text-secondary); font-weight: 600; }
+  .opp-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; align-items: center; }
+  .opp-actions a { color: var(--c1); font-size: 13px; font-weight: 600; text-decoration: none; }
+  .opp-actions a:hover { text-decoration: underline; }
+  .opp-actions button { padding: 4px 10px; font-size: 12px; }
+  .opp-summary { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 14px; color: var(--text-secondary); font-size: 12.5px; }
+  .opp-summary b { color: var(--text-primary); }
+  .opp-list .post { border-left-color: color-mix(in srgb, var(--c2) 70%, var(--border)); }
+  .opp-list .post-text { max-height: 10.5em; overflow: hidden; }
+  .opp-list .post-text.open { max-height: none; }
+  .opp-list .comment { font-size: 13px; }
 
   /* Settings */
   .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
@@ -352,31 +393,33 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
       </div>
       <div style="min-width:0">
-        <h1>Group Scraper</h1>
+        <h1>群组数据抓取</h1>
         <label class="sr-only" for="groupSel">Group</label>
-        <select id="groupSel" class="group-sel" title="Group shown here and scraped by Start scrape"></select>
+        <select id="groupSel" class="group-sel" title="Group shown here and scraped by 开始抓取"></select>
       </div>
     </div>
     <div class="actions">
-      <span class="pill chip-safe" id="safeChip" hidden title="Low-risk mode is on: small, slow runs without extra clicks. Change it in Settings → Safety.">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/></svg>Low-risk mode</span>
-      <button type="button" class="secondary icon-btn" id="themeBtn" title="Color theme" aria-label="Color theme: auto"></button>
+      <span class="pill chip-safe" id="safeChip" hidden title="低风险模式 is on: small, slow runs without extra clicks. Change it in Settings → Safety.">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/></svg>低风险模式</span>
+      <button type="button" class="secondary icon-btn" id="themeBtn" title="颜色主题" aria-label="颜色主题: auto"></button>
       <span class="pill" id="pill" data-state="idle"><span class="dot"></span><span id="stateLabel">Idle</span></span>
       <button type="button" class="secondary stop-btn" id="stopBtn" hidden>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
         Stop</button>
       <button id="runBtn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg>
-        Start scrape
+        开始抓取
       </button>
     </div>
-    <nav class="tabs" role="tablist" aria-label="Dashboard sections">
+    <nav class="tabs" role="tablist" aria-label="面板分区">
       <button role="tab" id="tab-overview" aria-controls="panel-overview" data-tab="overview">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Overview</button>
       <button role="tab" id="tab-posts" aria-controls="panel-posts" data-tab="posts">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/></svg>Posts<span class="tab-badge" id="postsBadge"></span></button>
       <button role="tab" id="tab-analytics" aria-controls="panel-analytics" data-tab="analytics">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>Analytics</button>
+      <button role="tab" id="tab-opportunities" aria-controls="panel-opportunities" data-tab="opportunities" title="最近的需求、热帖和讨论">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20V5M3 20h18"/><path d="M7 16l4-5 4 3 5-7"/><circle cx="20" cy="7" r="1.5" fill="currentColor" stroke="none"/></svg>需求机会</button>
       <button role="tab" id="tab-settings" aria-controls="panel-settings" data-tab="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Settings</button>
       <button role="tab" id="tab-log" aria-controls="panel-log" data-tab="log">
@@ -389,18 +432,18 @@
 
 <main class="wrap">
   <div class="alert" id="checkpointAlert" role="alert" hidden>
-    <span class="alert-text"><strong>⚠ Facebook showed a checkpoint</strong> <span id="checkpointWhen"></span>.
+    <span class="alert-text"><strong>⚠ Facebook 出现验证/检查点</strong> <span id="checkpointWhen"></span>.
       Stop for today: running again soon is the fastest way to get the account locked.
       <span id="checkpointMsg" class="notice"></span></span>
     <button type="button" class="secondary" data-goto="account">Log in again</button>
-    <button type="button" class="secondary" id="checkpointAck">I understand</button>
+    <button type="button" class="secondary" id="checkpointAck">我已了解</button>
   </div>
   <div class="alert" id="privacyAlert" role="alert" hidden>
-    <span class="alert-text"><strong>Privacy</strong> <span id="privacyText"></span></span>
+    <span class="alert-text"><strong>隐私</strong> <span id="privacyText"></span></span>
     <button type="button" class="secondary" data-goto="settings">Open Settings</button>
   </div>
   <div class="alert alert-info" id="loginAlert" role="status" hidden>
-    <span class="alert-text"><strong id="loginAlertTitle">No saved Facebook login</strong>
+    <span class="alert-text"><strong id="loginAlertTitle">还没有保存的 Facebook 登录</strong>
       <span id="loginAlertText">Log in before scraping.</span></span>
     <button type="button" data-goto="account">Open Account</button>
   </div>
@@ -419,26 +462,26 @@
     <div class="kpis">
       <div class="card kpi" style="--accent: var(--c1)">
         <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 10h16M4 15h10"/></svg></div>
-        <div class="value" id="kPosts">0</div><div class="label">Posts saved</div>
+        <div class="value" id="kPosts">0</div><div class="label">Posts 已保存</div>
       </div>
       <div class="card kpi" style="--accent: var(--c3)">
         <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/></svg></div>
-        <div class="value" id="kComments">0</div><div class="label">Comments saved</div>
+        <div class="value" id="kComments">0</div><div class="label">已保存评论</div>
       </div>
       <div class="card kpi" style="--accent: var(--c5)">
         <div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 5 6.4 5c2 0 3.5 1.2 4.3 2.6h2.6C14.1 6.2 15.6 5 17.6 5 21 5 23.1 8.4 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg></div>
-        <div class="value" id="kReactions">0</div><div class="label">Reactions counted</div>
+        <div class="value" id="kReactions">0</div><div class="label">已计互动</div>
       </div>
     </div>
 
     <div class="grid g-wide">
       <div class="card">
-        <h2>This run</h2>
-        <p class="sub">Progress and new posts found on each scroll</p>
+        <h2>本次运行</h2>
+        <p class="sub">每次滚动的进度和新帖子数量</p>
         <p class="run-group" id="runGroup" hidden></p>
         <div class="run-row">
           <div style="--accent: var(--c7)">
-            <div class="label">New posts</div>
+            <div class="label">新帖子</div>
             <div class="value"><span id="kRun">0</span> <small id="kRunMax">/ 0</small></div>
             <div class="progress"><div id="pRun" style="width:0"></div></div>
           </div>
@@ -448,21 +491,21 @@
             <div class="progress"><div id="pScroll" style="width:0"></div></div>
           </div>
           <div style="--accent: var(--c3)" title="JavaScript memory of the scraping tab. The tab is reopened when it passes the limit in Settings → Performance.">
-            <div class="label">Page memory</div>
+            <div class="label">页面内存</div>
             <div class="value"><span id="kMem">–</span> <small id="kMemMax"></small></div>
             <div class="progress"><div id="pMem" style="width:0"></div></div>
           </div>
         </div>
-        <svg class="chart" id="scrollChart" height="220" role="img" aria-label="New posts found on each scroll"></svg>
+        <svg class="chart" id="scrollChart" height="220" role="img" aria-label="新帖子 found on each scroll"></svg>
       </div>
       <div class="card">
-        <div class="card-head"><h2>Latest log</h2><button class="linkish" data-goto="log">Open full log →</button></div>
-        <pre class="mini-log" id="miniLog">No log yet</pre>
+        <div class="card-head"><h2>最新日志</h2><button class="linkish" data-goto="log">打开完整日志 →</button></div>
+        <pre class="mini-log" id="miniLog">暂无日志</pre>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-head"><h2>Latest posts</h2><button class="linkish" data-goto="posts">See all posts →</button></div>
+      <div class="card-head"><h2>最新帖子</h2><button class="linkish" data-goto="posts">查看全部帖子 →</button></div>
       <div class="post-list" id="recentPosts"></div>
     </div>
   </section>
@@ -473,19 +516,20 @@
       <label class="search">
         <span class="sr-only">Search posts and comments</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input type="search" id="postSearch" placeholder="Search posts and comments…">
+        <input type="search" id="postSearch" placeholder="搜索帖子和评论…">
       </label>
-      <label class="sr-only" for="postSort">Sort posts</label>
+      <label class="sr-only" for="postSort">排序帖子</label>
       <select id="postSort">
-        <option value="newest">Newest scraped</option>
-        <option value="reactions">Most reactions</option>
-        <option value="comments">Most comments</option>
-        <option value="shares">Most shares</option>
+        <option value="newest">最近抓取</option>
+        <option value="reactions">最多互动</option>
+        <option value="comments">最多评论</option>
+        <option value="shares">最多转发</option>
       </select>
+      <label class="switch"><input type="checkbox" id="postHideReviewed"> 隐藏已参考</label>
       <span class="count" id="postCount"></span>
     </div>
     <div class="post-list" id="postList"></div>
-    <div class="more-row"><button class="secondary" id="loadMore" hidden>Load more</button></div>
+    <div class="more-row"><button class="secondary" id="loadMore" hidden>加载更多</button></div>
   </section>
 
   <!-- ============ ANALYTICS ============ -->
@@ -494,64 +538,174 @@
 
     <div class="grid g2">
       <div class="card">
-        <h2>Reaction mix</h2>
-        <p class="sub">All reactions on saved posts, by type</p>
+        <h2>互动分布</h2>
+        <p class="sub">已保存帖子的互动，按类型</p>
         <div class="donut-wrap">
-          <svg class="chart" id="donut" viewBox="0 0 220 220" role="img" aria-label="Reactions by type"></svg>
+          <svg class="chart" id="donut" viewBox="0 0 220 220" role="img" aria-label="按类型互动分布"></svg>
           <div class="legend" id="donutLegend"></div>
         </div>
         <p class="notice" id="coverage" style="margin-top:14px"></p>
       </div>
       <div class="card">
         <h2>Posts per day</h2>
-        <p class="sub">By when posts were published (from Facebook's time labels)</p>
+        <p class="sub">按帖子发布时间（来自 Facebook 时间标签）</p>
         <svg class="chart" id="perDay" height="250" role="img" aria-label="Posts published per day"></svg>
       </div>
     </div>
 
     <div class="card" style="margin-bottom:14px">
-      <h2>When people post</h2>
-      <p class="sub" id="heatSub">Weekday × hour of day, for posts whose exact time is known</p>
+      <h2>发帖时间分布</h2>
+      <p class="sub" id="heatSub">星期 × 小时，仅统计知道确切时间的帖子</p>
       <div id="heatmap"></div>
     </div>
 
     <div class="card" style="margin-bottom:14px">
-      <h2>Most-reacted posts</h2>
-      <p class="sub">Top 10, split by reaction type</p>
+      <h2>互动最多帖子</h2>
+      <p class="sub">前 10 名，按互动类型拆分</p>
       <div class="key" id="topKey"></div>
       <div class="stack-list" id="topPosts"></div>
     </div>
 
     <div class="grid g2">
       <div class="card">
-        <h2>Reactions per post</h2>
-        <p class="sub">How many posts fall in each range</p>
+        <h2>每帖互动数</h2>
+        <p class="sub">各区间帖子数量</p>
         <div class="cols" id="reactionHist"></div>
       </div>
       <div class="card">
-        <h2>Comments per post</h2>
-        <p class="sub" id="commentHistSub">Facebook's own count for each post</p>
+        <h2>每帖评论数</h2>
+        <p class="sub" id="commentHistSub">Facebook 自身统计的评论数</p>
         <div class="cols" id="commentHist"></div>
       </div>
     </div>
 
     <div class="card">
-      <h2>Top phrases</h2>
-      <p class="sub">Two-word phrases, counted once per post</p>
+      <h2>高频短语</h2>
+      <p class="sub">双词短语，每帖只计一次</p>
       <div class="bars" id="phrases"></div>
     </div>
   </section>
 
-  <!-- ============ SETTINGS ============ -->
+  <!-- ============ DEMAND / OPPORTUNITIES ============ -->
+  <section role="tabpanel" id="panel-opportunities" aria-labelledby="tab-opportunities" hidden>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-head">
+        <div>
+          <h2>需求机会 · Demand &amp; hot posts</h2>
+          <p class="sub" style="margin-bottom:0">按最近时间、点赞/评论/分享、需求词和你的产品词综合排序；“高意向”表示有明确买家短语或数量需求。先看高意向和需求，再决定跟哪条。</p>
+        </div>
+        <button type="button" class="secondary" id="oppRefresh">刷新</button>
+      </div>
+      <div class="opp-controls" style="margin-top:12px">
+        <label class="sr-only" for="oppDays">Look-back period</label>
+        <select id="oppDays" title="Look-back period">
+          <option value="7">近 7 天</option>
+          <option value="30" selected>近 30 天</option>
+          <option value="90">近 90 天</option>
+          <option value="365">近 1 年</option>
+          <option value="3650">全部时间</option>
+        </select>
+        <label class="sr-only" for="oppKind">Filter</label>
+        <select id="oppKind" title="Filter">
+          <option value="all">全部机会</option>
+          <option value="lead">只看高意向线索</option>
+          <option value="demand">只看需求</option>
+          <option value="hot">只看热帖</option>
+          <option value="discussed">只看讨论多</option>
+          <option value="fresh">只看近 7 天</option>
+          <option value="supply">只看供应/同行</option>
+        </select>
+        <label class="sr-only" for="oppSort">Sort</label>
+        <select id="oppSort" title="Sort">
+          <option value="score" selected>综合分数</option>
+          <option value="reactions">最多点赞</option>
+          <option value="comments">最多评论</option>
+          <option value="shares">最多转发</option>
+          <option value="engagement">最多互动</option>
+        </select>
+        <label class="switch"><input type="checkbox" id="oppHideReviewed"> 隐藏已参考</label>
+        <label class="search">
+          <span class="sr-only">Search opportunities</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" id="oppSearch" placeholder="搜索帖子/评论（产品词、价格、求购…）">
+        </label>
+        <a class="btn secondary" id="oppExport" href="/api/opportunities?format=csv&days=30&kind=all" download>下载 CSV</a>
+      </div>
+      <p class="opp-summary" id="oppSummary"></p>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-head">
+        <div>
+          <h2>高意向线索 · 跨群组</h2>
+          <p class="sub" style="margin-bottom:0">不管当前选的是哪个群组，这里汇总所有群组里值得优先回复的买家。点“打开原帖”查看原帖；旧数据若缺少链接会显示“群内搜索原帖”，重新抓取时补上。</p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <span class="notice" id="leadCount"></span>
+          <a class="btn secondary" id="leadExport" href="/api/leads?format=csv&days=30&limit=500" download>下载高意向 CSV</a>
+        </div>
+      </div>
+      <div class="post-list opp-list" id="leadList"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-head">
+        <div>
+          <h2>自动回复 · 网站推广</h2>
+          <p class="sub" style="margin-bottom:0">只回复“有原帖链接 + 高意向买家 + 产品匹配你网站”的帖子。开启后每次抓取结束自动发送，每天有上限、每条之间有间隔，连续失败会停。下面是待发送预览。</p>
+        </div>
+        <span class="notice" id="outreachStatus"></span>
+      </div>
+      <div class="post-list opp-list" id="outreachList"></div>
+    </div>
+
+    <div class="kpis" id="oppKpis"></div>
+
+    <div class="grid g2">
+      <div class="card">
+        <h2>产品词热度</h2>
+        <p class="sub">最近窗口内，提到该产品词的帖子数（可到 Settings → Demand analysis 修改）</p>
+        <div class="bars" id="oppFocus"></div>
+      </div>
+      <div class="card">
+        <h2>需求词</h2>
+        <p class="sub">买家常用词；这些词出现的帖子会被标成“需求”</p>
+        <div class="bars" id="oppDemandWords"></div>
+      </div>
+    </div>
+
+    <div class="grid g2">
+      <div class="card">
+        <h2>每天的需求帖</h2>
+        <p class="sub">最近 30 天（最多）每天有多少条带需求词的帖子</p>
+        <div class="bars" id="oppDaily"></div>
+      </div>
+      <div class="card">
+        <h2>热门话题</h2>
+        <p class="sub">帖子正文里最常出现的词/短语</p>
+        <div class="bars" id="oppTopics"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div><h2>可跟进的帖子</h2><p class="sub" style="margin-bottom:0">点数 = 互动 + 需求/产品词命中 + 新鲜度；不是自动发广告，只是帮你排序。</p></div>
+        <span class="count" id="oppCount"></span>
+      </div>
+      <div class="post-list opp-list" id="oppList"></div>
+      <div class="more-row"><button type="button" class="secondary" id="oppMore" hidden>加载更多</button></div>
+    </div>
+  </section>
+
   <section role="tabpanel" id="panel-settings" aria-labelledby="tab-settings" hidden>
     <div class="card">
       <h2>Settings</h2>
-      <p class="sub">Saved to data/settings.json and used from the next run. Clicking Start scrape saves unsaved changes first.</p>
+      <p class="sub">Saved to data/settings.json and used from the next run. Clicking 开始抓取 saves unsaved changes first.</p>
       <form id="settingsForm" novalidate>
         <div class="settings-grid" id="settingsFields"></div>
         <div class="settings-actions">
-          <button type="submit">Save settings</button>
-          <button type="button" class="secondary" id="resetSettings">Reset to .env defaults</button>
+          <button type="submit">保存设置</button>
+          <button type="button" class="secondary" id="resetSettings">恢复 .env 默认值</button>
           <span class="notice" id="settingsNotice"></span>
         </div>
       </form>
@@ -564,22 +718,22 @@
       <div class="acct-status">
         <span class="acct-icon" id="acctIcon" aria-hidden="true"></span>
         <div>
-          <h2 id="acctTitle">Facebook login</h2>
+          <h2 id="acctTitle">Facebook 登录</h2>
           <p class="notice" id="acctLine"></p>
         </div>
       </div>
     </div>
 
     <div class="card passphrase-card" id="passCard" style="margin-bottom:14px" hidden>
-      <h2 id="passTitle">Vault passphrase</h2>
+      <h2 id="passTitle">密码库密码</h2>
       <p class="sub" id="passSub"></p>
       <div class="pass-grid">
-        <div class="field"><label for="passphrase">Passphrase</label>
+        <div class="field"><label for="passphrase">密码</label>
           <input type="password" id="passphrase" autocomplete="new-password" minlength="8"></div>
-        <div class="field" id="passConfirmField"><label for="passphraseConfirm">Repeat passphrase</label>
+        <div class="field" id="passConfirmField"><label for="passphraseConfirm">重复密码</label>
           <input type="password" id="passphraseConfirm" autocomplete="new-password"></div>
       </div>
-      <div class="settings-actions" id="unlockRow"><button type="button" id="unlockBtn">Unlock</button>
+      <div class="settings-actions" id="unlockRow"><button type="button" id="unlockBtn">解锁</button>
         <span class="notice" id="unlockNotice"></span></div>
     </div>
 
@@ -587,35 +741,35 @@
       <div class="card">
         <h2>Log in with a browser window</h2>
         <p class="sub">Opens a normal Chrome/Edge window on Facebook's login page. Finish 2FA or any security
-          check there yourself; the dashboard notices when you're logged in and saves the session.</p>
+          选中 there yourself; the dashboard notices when you're logged in and saves the session.</p>
         <form id="loginForm" autocomplete="off">
-          <div class="field check" id="useSavedField" hidden>
-            <input type="checkbox" id="useSaved"><label for="useSaved">Fill in my saved email and password (<span id="savedEmail"></span>)</label>
+          <div class="field 选中" id="useSavedField" hidden>
+            <input type="checkbox" id="useSaved"><label for="useSaved">Fill in my 已保存 email and password (<span id="savedEmail"></span>)</label>
           </div>
           <div id="credFields">
-            <div class="field"><label for="loginEmail">Email or phone (optional)</label>
+            <div class="field"><label for="loginEmail">邮箱或手机号（可选）</label>
               <input type="text" id="loginEmail" autocomplete="off"></div>
-            <div class="field"><label for="loginPass">Password (optional)</label>
+            <div class="field"><label for="loginPass">密码（可选）</label>
               <input type="password" id="loginPass" autocomplete="off"></div>
             <p class="hint">Leave both empty to type them in the login window yourself. Filled in here, they're typed
               into the form for you.</p>
-            <div class="field check"><input type="checkbox" id="rememberCreds">
-              <label for="rememberCreds">Remember them in the encrypted vault</label></div>
+            <div class="field 选中"><input type="checkbox" id="rememberCreds">
+              <label for="rememberCreds">把它们保存到加密密码库</label></div>
           </div>
           <div class="settings-actions">
-            <button type="submit" id="loginBtn">Open login window</button>
-            <button type="button" class="secondary" id="cancelLogin" hidden>Cancel</button>
+            <button type="submit" id="loginBtn">打开登录窗口</button>
+            <button type="button" class="secondary" id="cancelLogin" hidden>取消</button>
           </div>
           <p class="login-status" id="loginStatus" aria-live="polite"></p>
         </form>
-        <p class="hint">If Meta's check page stays blank in that window, use cookies instead →</p>
+        <p class="hint">If Meta's 选中 page stays blank in that window, use cookies instead →</p>
         <div class="settings-actions" id="forgetRow" hidden>
-          <button type="button" class="secondary" id="forgetBtn">Forget saved password</button>
+          <button type="button" class="secondary" id="forgetBtn">Forget 已保存 password</button>
         </div>
       </div>
 
       <div class="card">
-        <h2>Paste cookies from a logged-in browser</h2>
+        <h2>从已登录的浏览器粘贴 Cookie</h2>
         <p class="sub">In a browser where Facebook works: F12 → <b>Application</b> (Chrome/Edge) or <b>Storage</b>
           (Firefox) → Cookies → https://www.facebook.com, then copy the <b>Value</b> of each.</p>
         <form id="cookieForm" autocomplete="off">
@@ -636,7 +790,7 @@
             </div>
           </details>
           <div class="settings-actions">
-            <button type="submit">Save session</button>
+            <button type="submit">保存会话</button>
             <span class="notice" id="cookieNotice"></span>
           </div>
         </form>
@@ -653,12 +807,12 @@
         <label class="search">
           <span class="sr-only">Filter log lines</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input type="search" id="logFilter" placeholder="Filter log…">
+          <input type="search" id="logFilter" placeholder="筛选日志…">
         </label>
-        <label class="switch"><input type="checkbox" id="logProblems"> Problems only</label>
-        <label class="switch"><input type="checkbox" id="logFollow" checked> Follow new lines</label>
+        <label class="switch"><input type="checkbox" id="logProblems"> 只看问题</label>
+        <label class="switch"><input type="checkbox" id="logFollow" 选中ed> 跟随新日志</label>
       </div>
-      <pre class="log-box" id="logBox">No log yet</pre>
+      <pre class="log-box" id="logBox">暂无日志</pre>
     </div>
   </section>
 </main>
@@ -669,8 +823,8 @@ const $ = id => document.getElementById(id);
 const NS = "http://www.w3.org/2000/svg";
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const STATE_LABELS = { idle: "Idle", starting: "Starting…", running: "Running", resting: "Resting", done: "Finished", stopped: "Stopped", blocked: "Blocked by Facebook", error: "Error" };
-const HERO_TEXT = { idle: "Ready to scrape", starting: "Starting the browser…", running: "Scraping in progress", resting: "Resting between batches", done: "Last run finished", stopped: "Stopped", blocked: "Stopped by Facebook", error: "Last run hit an error" };
+const STATE_LABELS = { idle: 'Idle', starting: '正在开始…', running: '运行中', resting: '休息中', done: '已完成', stopped: '已停止', blocked: '被 Facebook 阻止', error: '错误' };
+const HERO_TEXT = { idle: 'Ready，可以开始抓取', starting: '正在启动浏览器…', running: '正在抓取', resting: '分批休息中', done: '上次运行已完成', stopped: '已停止', blocked: '被 Facebook 阻止', error: '上次运行出错' };
 
 // Reaction types keep the same color everywhere (palette slots 1-7, in order)
 const RX = [
@@ -737,7 +891,7 @@ function setNumber(node, value) {
 }
 
 // ---------- tabs ----------
-const TABS = ["overview", "posts", "analytics", "settings", "log", "account"];
+const TABS = ["overview", "posts", "analytics", "opportunities", "settings", "log", "account"];
 let currentTab = "overview";
 function showTab(name, focus) {
   if (!TABS.includes(name)) name = "overview";
@@ -752,6 +906,7 @@ function showTab(name, focus) {
   if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
   if (name === "posts") loadPosts(true);
   if (name === "analytics") loadAnalytics();
+  if (name === "opportunities") loadOpportunities(true);
   if (name === "log") loadLog();
   if (name === "account") loadAccount();
   hideTip();
@@ -776,7 +931,7 @@ function renderScrollChart(values) {
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   svg.replaceChildren();
   if (!values.length) {
-    svgEl(svg, "text", { x: W / 2, y: H / 2, "text-anchor": "middle" }).textContent = "Start a scrape to see progress here";
+    svgEl(svg, "text", { x: W / 2, y: H / 2, "text-anchor": "middle" }).textContent = "开始抓取后这里会显示进度";
     return;
   }
   const max = Math.max(4, ...values), step = Math.ceil(max / 4), top = step * 4;
@@ -799,7 +954,7 @@ function renderScrollChart(values) {
       d: `M${x},${y(0)} V${y(0) - h + r} Q${x},${y(0) - h} ${x + r},${y(0) - h} H${x + bw - r} Q${x + bw},${y(0) - h} ${x + bw},${y(0) - h + r} V${y(0)} Z`,
     });
     const hit = svgEl(svg, "rect", { x: pad.l + i * slot, y: pad.t, width: slot, height: plotH, fill: "transparent" });
-    hover(hit, e => { bar.style.opacity = .75; showTip(e, v, `new posts on scroll ${i + 1}`); });
+    hover(hit, e => { bar.style.opacity = .75; showTip(e, v, `滚动时的新帖子 ${i + 1}`); });
     hit.addEventListener("pointerleave", () => { bar.style.opacity = 1; });
     if ((i + 1) % every === 0 || i === 0) svgEl(svg, "text", { x: x + bw / 2, y: H - 6, "text-anchor": "middle" }).textContent = i + 1;
   });
@@ -814,7 +969,7 @@ function colorLine(line) {
 }
 function renderLogLines(box, lines) {
   box.replaceChildren();
-  if (!lines.length) { box.textContent = "No log yet"; return; }
+  if (!lines.length) { box.textContent = "暂无日志"; return; }
   for (const line of lines) box.append(el("span", { class: colorLine(line), text: line + "\n" }));
 }
 
@@ -830,7 +985,7 @@ function renderCheckpoint(d) {
   $("checkpointWhen").textContent = "at " + cp.at.replace("T", " ");
   $("checkpointMsg").textContent = cp.message;
   if (notifiedCheckpoint !== cp.at && "Notification" in window && Notification.permission === "granted") {
-    new Notification("Facebook showed a checkpoint", { body: "Scraping stopped. Take a break for today." });
+    new Notification("Facebook 出现验证/检查点", { body: "正在抓取 stopped. Take a break for today." });
   }
   notifiedCheckpoint = cp.at;
 }
@@ -838,7 +993,7 @@ function renderCheckpoint(d) {
 async function refreshStats() {
   let d;
   try { d = await (await fetch("/api/stats")).json(); }
-  catch { $("notice").textContent = "Can't reach the dashboard server — is it still running?"; return; }
+  catch { $("notice").textContent = "无法连接到面板服务器——它还在运行吗？"; return; }
   lastStats = d;
   renderCheckpoint(d);
   const s = d.status || {};
@@ -847,22 +1002,22 @@ async function refreshStats() {
   $("stateLabel").textContent = STATE_LABELS[state] || state;
   $("heroState").textContent = HERO_TEXT[state] || state;
   renderGroups(d.groups);
-  // Say which group "This run" is about: it can differ from the one picked in the header
+  // Say which group "本次运行" is about: it can differ from the one picked in the header
   $("runGroup").hidden = !s.group;
   if (s.group) {
     const prefix = d.process_running
-      ? (s.groups_total > 1 ? `Group ${s.group_index}/${s.groups_total}: ` : "Scraping ")
-      : "Last run: ";
+      ? (s.groups_total > 1 ? `Group ${s.group_index}/${s.groups_total}: ` : "正在抓取 ")
+      : "上次运行：";
     $("runGroup").replaceChildren(prefix, el("strong", { text: s.group }));
   }
   $("runBtn").lastChild.textContent = d.groups.scrape_all && d.groups.groups.length > 1
-    ? ` Scrape all ${d.groups.groups.length} groups` : " Start scrape";
+    ? ` 抓取全部 ${d.groups.groups.length} 个群组` : " 开始抓取";
   const mem = s.memory_mb || 0, memMax = d.recycle_mb || 0;
   $("kMem").textContent = mem ? fmt(mem) : "–";
   $("kMemMax").textContent = mem ? (memMax ? `MB / ${fmt(memMax)}` : "MB") : "";
   $("pMem").style.width = memMax ? pct(mem, memMax) : "0";
   $("safeChip").hidden = !d.low_risk_mode;
-  $("runBtn").disabled = d.process_running || !d.has_session;
+  $("runBtn").disabled = d.process_running || !d.has_session || !d.unlocked || d.has_saved_session === false;
   $("stopBtn").hidden = !d.process_running;
   $("runBtn").hidden = d.process_running;
   // Batch mode: show where the session is
@@ -874,7 +1029,8 @@ async function refreshStats() {
   renderLoginAlert(d);
   $("privacyAlert").hidden = !d.privacy_warning;
   $("privacyText").textContent = d.privacy_warning || "";
-  if (!d.has_session) $("notice").textContent = "No saved login yet. Log in in the Account tab.";
+  if (!d.has_session || d.has_saved_session === false) $("notice").textContent = "还没有保存的 Facebook 登录，请先在账户页登录。";
+  else if (!d.unlocked) $("notice").textContent = "密码库已锁定，请在账户页输入密码。";
   else if (s.message && !d.process_running) $("notice").textContent = s.message;
 
   setNumber($("kPosts"), d.total_posts);
@@ -897,6 +1053,7 @@ async function refreshStats() {
     loadRecent();
     if (currentTab === "posts" && !$("postSearch").value) loadPosts(true);
     if (currentTab === "analytics") loadAnalytics();
+    if (currentTab === "opportunities") loadOpportunities(false);
   }
   if (currentTab === "log") loadLog();
 }
@@ -906,8 +1063,18 @@ let groupsKey = "";
 function renderGroups(g) {
   if (!g) return;
   const sel = $("groupSel");
-  const key = JSON.stringify(g);
-  if (key === groupsKey) return;  // unchanged: don't disturb an open menu
+  const structure = [g.selected, g.scrape_all, g.groups.map(x => [x.slug, x.url])];
+  const key = JSON.stringify(structure);
+  if (key === groupsKey) {
+    // Counts change during a scrape; update labels without rebuilding the
+    // open <select> (which would close the menu every two seconds).
+    for (const opt of sel.options) {
+      const grp = g.groups.find(x => x.slug === opt.value);
+      if (grp) opt.textContent = `${grp.slug} · ${fmt(grp.posts)} posts`;
+    }
+    sel.value = g.selected;
+    return;
+  }
   groupsKey = key;
   sel.replaceChildren();
   for (const grp of g.groups) {
@@ -927,6 +1094,7 @@ $("groupSel").addEventListener("change", async e => {
   await refreshStats();
   if (currentTab === "posts") loadPosts(true);
   if (currentTab === "analytics") loadAnalytics();
+  if (currentTab === "opportunities") loadOpportunities(true);
 });
 function slugOf(url) {
   const m = /\/groups\/([^/?#]+)/.exec(url || "");
@@ -954,33 +1122,149 @@ const ICON_HEART = '<path d="M12 20s-7-4.3-9-8.6C1.6 8.2 3.6 5 6.8 5c1.9 0 3.3 1
 const ICON_SHARE = '<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v12M7 8l5-5 5 5"/>';
 const ICON_BUBBLE = '<path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/>';
 
+const TRANSLATE_CACHE_KEY = "fb_translate_zh_v1";
+function loadTranslateCache() {
+  try { return JSON.parse(localStorage.getItem(TRANSLATE_CACHE_KEY) || "{}"); }
+  catch { return {}; }
+}
+function saveTranslateCache(cache) {
+  try { localStorage.setItem(TRANSLATE_CACHE_KEY, JSON.stringify(cache)); } catch {}
+}
+const translateQueue = [];
+let translateActive = 0;
+function pumpTranslate() {
+  while (translateActive < 2 && translateQueue.length) {
+    const job = translateQueue.shift();
+    translateActive++;
+    fetch("/api/translate?text=" + encodeURIComponent(job.text))
+      .then(r => r.json())
+      .then(data => {
+        if (data.translated) {
+          job.target.textContent = "中文翻译：\n" + data.translated;
+          job.target.style.display = "block";
+          const cache = loadTranslateCache();
+          cache[job.text] = data.translated;
+          saveTranslateCache(cache);
+        } else {
+          job.target.textContent = "翻译失败：" + (data.message || "未知错误");
+          job.target.style.display = "block";
+        }
+      })
+      .catch(e => {
+        job.target.textContent = "翻译失败：" + e.message;
+        job.target.style.display = "block";
+      })
+      .finally(() => {
+        translateActive--;
+        pumpTranslate();
+      });
+  }
+}
+function enqueueTranslate(text, target) {
+  text = (text || "").trim();
+  if (!text) return;
+  const cache = loadTranslateCache();
+  if (cache[text]) {
+    target.textContent = "中文翻译：\n" + cache[text];
+    target.style.display = "block";
+    return;
+  }
+  // Avoid queueing the same text twice.
+  if (translateQueue.some(j => j.text === text)) return;
+  translateQueue.push({ text, target });
+  pumpTranslate();
+}
+
+function scrapedLabel(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? value : d.toLocaleString("zh-CN", { dateStyle: "medium", timeStyle: "short" });
+}
+function reviewBadge(p) {
+  const tag = el("span", { class: "reviewed-tag", text: "已参考" });
+  tag.hidden = !p.reviewed_at;
+  return tag;
+}
+function applyReviewed(card, p, btn, tag) {
+  card.classList.toggle("reviewed", !!p.reviewed_at);
+  if (btn) btn.textContent = p.reviewed_at ? "✓ 已参考" : "标记已参考";
+  if (tag) tag.hidden = !p.reviewed_at;
+}
+function reviewButton(p, card, tag) {
+  const btn = el("button", { type: "button", class: "secondary",
+    text: p.reviewed_at ? "✓ 已参考" : "标记已参考" });
+  btn.title = p.reviewed_at ? "点击取消已参考标记" : "点击标记为已参考；下次会变灰，避免重复打开";
+  btn.addEventListener("click", async () => {
+    if (!p.review_key) { btn.textContent = "缺少帖子标识"; return; }
+    const next = !p.reviewed_at;
+    btn.disabled = true;
+    try {
+      const res = await postJSON("/api/reviewed", { key: p.review_key, reviewed: next });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.message || "保存失败");
+      p.reviewed_at = data.reviewed_at || "";
+      applyReviewed(card, p, btn, tag);
+    } catch {
+      const old = btn.textContent;
+      btn.textContent = "保存失败";
+      setTimeout(() => { btn.textContent = old; }, 1500);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  return btn;
+}
+
 function postCard(p, compact) {
   const top = RX.reduce((best, t) => (p.reactions[t[0]] > (p.reactions[best[0]] || 0) ? t : best), RX[0]);
   const card = el("article", { class: "card post", style: `--accent:${p.reaction_total ? css(top[3]) : "var(--border)"}` });
+  if (p.reviewed_at) card.classList.add("reviewed");
   const when = p.posted_at ? new Date(p.posted_at).toLocaleString([], { dateStyle: "medium", ...(p.posted_has_time ? { timeStyle: "short" } : {}) }) : "";
+  const reviewedTag = reviewBadge(p);
   card.append(el("div", { class: "post-head" },
-    el("span", { class: "author-chip", title: "Hashed author" , text: p.author || "unknown" }),
+    el("span", { class: "author-chip", title: "作者（已哈希）" , text: p.author || "unknown" }),
     el("span", { text: p.time_text || "" }),
     when ? el("span", { text: "· " + when }) : null,
-    p.reaction_updated_at ? el("span", { class: "updated-tag", title: "Reactions/comments refreshed by \"Update saved posts\"",
-      text: "↻ updated " + new Date(p.reaction_updated_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) }) : null));
-  const text = el("div", { class: "post-text clamp", text: p.text || "(no text)" });
+    p.scraped_at ? el("span", { class: "scraped-tag", title: "本机抓取这条帖子的时间", text: "抓取于 " + scrapedLabel(p.scraped_at) }) : null,
+    p.reaction_updated_at ? el("span", { class: "updated-tag", title: "Reactions/comments refreshed by \"Update 已保存 posts\"",
+      text: "↻ updated " + new Date(p.reaction_updated_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) }) : null,
+    reviewedTag));
+  const text = el("div", { class: "post-text clamp", text: p.text || "（无文字）" });
   card.append(text);
+  const translation = el("div", { class: "post-text", style: "margin-top:8px;color:var(--text-secondary);display:none" });
+  card.append(translation);
+  enqueueTranslate(p.text || "", translation);
   if (!compact) {
     requestAnimationFrame(() => {
       if (text.scrollHeight > text.clientHeight + 2) {
-        const more = el("button", { class: "linkish", type: "button", text: "Show more", style: "margin-top:6px;font-size:13px" });
-        more.addEventListener("click", () => { const c = text.classList.toggle("clamp"); more.textContent = c ? "Show more" : "Show less"; });
+        const more = el("button", { class: "linkish", type: "button", text: "查看更多", style: "margin-top:6px;font-size:13px" });
+        more.addEventListener("click", () => { const c = text.classList.toggle("clamp"); more.textContent = c ? "查看更多" : "收起"; });
         text.after(more);
       }
     });
   }
-  const foot = el("div", { class: "post-foot" },
-    el("span", { class: "stat" }, icon(ICON_HEART), plural(p.reaction_total, "reaction")),
-    el("span", { class: "stat", title: "Facebook's count · how many are saved here" }, icon(ICON_BUBBLE),
-      p.comment_count != null ? `${plural(p.comment_count, "comment")} · ${p.comments.length} saved`
-                              : plural(p.comments.length, "comment") + " saved"),
-    p.share_count != null ? el("span", { class: "stat" }, icon(ICON_SHARE), plural(p.share_count, "share")) : null,
+    const link = p.post_url || p.url;
+  const postActions = el("div", { class: "opp-actions" });
+  const translateBtn = el("button", { type: "button", class: "secondary", text: "重新翻译" });
+  translateBtn.addEventListener("click", () => {
+    const cache = loadTranslateCache();
+    delete cache[p.text || ""];
+    saveTranslateCache(cache);
+    translation.style.display = "none";
+    translation.textContent = "";
+    delete translation.dataset.done;
+    enqueueTranslate(p.text || "", translation);
+  });
+  postActions.append(translateBtn);
+  postActions.append(reviewButton(p, card, reviewedTag));
+  if (link) postActions.append(el("a", { href: link, target: "_blank", rel: "noopener noreferrer", text: "打开原帖 ↗" }));
+  card.append(postActions);
+const foot = el("div", { class: "post-foot" },
+    el("span", { class: "stat" }, icon(ICON_HEART), `${fmt(p.reaction_total)} 个互动`),
+    el("span", { class: "stat", title: "Facebook 统计数 – 本机保存了多少" }, icon(ICON_BUBBLE),
+      p.comment_count != null ? `${fmt(p.comment_count)} 条评论 · ${p.comments.length} 已保存`
+                              : `${p.comments.length} 条评论已保存`),
+    p.share_count != null ? el("span", { class: "stat" }, icon(ICON_SHARE), `${fmt(p.share_count)} 次转发`) : null,
     reactionChips(p));
   card.append(foot);
   if (!compact && p.comments.length) {
@@ -995,7 +1279,7 @@ async function loadRecent() {
   const d = await (await fetch("/api/posts?limit=3")).json();
   const box = $("recentPosts");
   box.replaceChildren();
-  if (!d.posts.length) { box.append(el("div", { class: "empty", text: "No posts yet" })); return; }
+  if (!d.posts.length) { box.append(el("div", { class: "empty", text: "暂无帖子" })); return; }
   for (const p of d.posts) box.append(postCard(p, true));
 }
 
@@ -1004,7 +1288,8 @@ async function loadPosts(reset) {
   if (reset) postOffset = 0;
   const req = ++postReq;
   const q = encodeURIComponent($("postSearch").value.trim()), sort = $("postSort").value;
-  const d = await (await fetch(`/api/posts?q=${q}&sort=${sort}&offset=${postOffset}&limit=20`)).json();
+  const hide = $("postHideReviewed").checked ? "1" : "0";
+  const d = await (await fetch(`/api/posts?q=${q}&sort=${sort}&hide_reviewed=${hide}&offset=${postOffset}&limit=20`)).json();
   if (req !== postReq) return;  // a newer search already replaced this one
   const list = $("postList");
   if (reset) list.replaceChildren();
@@ -1012,11 +1297,12 @@ async function loadPosts(reset) {
   postOffset += d.posts.length;
   $("postCount").textContent = `${fmt(d.total)} post${d.total === 1 ? "" : "s"}`;
   $("loadMore").hidden = postOffset >= d.total;
-  if (!d.total) list.replaceChildren(el("div", { class: "card empty", text: $("postSearch").value ? "No posts match your search" : "No posts yet" }));
+  if (!d.total) list.replaceChildren(el("div", { class: "card empty", text: $("postSearch").value ? "没有匹配的帖子" : "暂无帖子" }));
 }
 let searchTimer;
 $("postSearch").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => loadPosts(true), 250); });
 $("postSort").addEventListener("change", () => loadPosts(true));
+$("postHideReviewed").addEventListener("change", () => loadPosts(true));
 $("loadMore").addEventListener("click", () => loadPosts(false));
 
 // ---------- analytics ----------
@@ -1031,7 +1317,7 @@ function kpiTile(label, value, accent, iconPath, suffix = "") {
   return tile;
 }
 
-const UNKNOWN = ["unknown", "Type not shown", "Type not shown", "--unknown"];
+const UNKNOWN = ["unknown", "类型未显示", "类型未显示", "--unknown"];
 function renderDonut(byType, sources, allReactions) {
   const svg = $("donut"), legend = $("donutLegend");
   svg.replaceChildren(); legend.replaceChildren();
@@ -1041,7 +1327,7 @@ function renderDonut(byType, sources, allReactions) {
   const cx = 110, cy = 110, R = 100, r = 64;
   if (!total) {
     svgEl(svg, "circle", { cx, cy, r: (R + r) / 2, fill: "none", stroke: "var(--track)", "stroke-width": R - r });
-    svgEl(svg, "text", { x: cx, y: cy + 4, "text-anchor": "middle" }).textContent = "No reactions yet";
+    svgEl(svg, "text", { x: cx, y: cy + 4, "text-anchor": "middle" }).textContent = "暂无互动";
   } else {
     let a0 = -Math.PI / 2;
     const segs = types.filter(t => byType[t[0]]);
@@ -1072,7 +1358,7 @@ function renderDonut(byType, sources, allReactions) {
   }
   const s = sources || {}, parts = [];
   if (s.popup) parts.push(`${fmt(s.popup)} posts with every type`);
-  if (s.bar) parts.push(`${fmt(s.bar)} with only the top 3 types (other types show as "Type not shown")`);
+  if (s.bar) parts.push(`${fmt(s.bar)} with only the top 3 types (other types show as "类型未显示")`);
   if (s.none) parts.push(`${fmt(s.none)} without reactions`);
   $("coverage").textContent = parts.join(" · ");
 }
@@ -1083,7 +1369,7 @@ function renderPerDay(series) {
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   svg.replaceChildren();
   if (series.length < 2) {
-    svgEl(svg, "text", { x: W / 2, y: H / 2, "text-anchor": "middle" }).textContent = series.length ? "Need posts from at least 2 days" : "No dated posts yet";
+    svgEl(svg, "text", { x: W / 2, y: H / 2, "text-anchor": "middle" }).textContent = series.length ? "至少需要 2 天的帖子" : "暂无带日期的帖子";
     return;
   }
   const max = Math.max(4, ...series.map(s => s[1])), step = Math.ceil(max / 4), top = step * 4;
@@ -1130,7 +1416,7 @@ function renderHeatmap(heat, n) {
   const box = $("heatmap");
   box.replaceChildren();
   $("heatSub").textContent = `Weekday × hour of day · ${fmt(n)} posts with a known time`;
-  if (n < 5) { box.append(el("div", { class: "empty", text: "Not enough posts with an exact time yet" })); return; }
+  if (n < 5) { box.append(el("div", { class: "empty", text: "带确切时间的帖子还不够" })); return; }
   const max = Math.max(...heat.flat());
   const grid = el("div", { class: "heat", role: "img", "aria-label": "Posts by weekday and hour" });
   grid.append(el("span"));
@@ -1156,7 +1442,7 @@ function renderTopPosts(top) {
   const key = $("topKey"), list = $("topPosts");
   key.replaceChildren(); list.replaceChildren();
   for (const t of [...RX, UNKNOWN]) key.append(el("span", {}, el("i", { class: "swatch", style: `background:${css(t[3])}` }), rxName(t)));
-  if (!top.length) { list.append(el("div", { class: "empty", text: "No reactions yet" })); return; }
+  if (!top.length) { list.append(el("div", { class: "empty", text: "暂无互动" })); return; }
   const max = top[0].total;
   for (const p of top) {
     const stack = el("div", { class: "stack", style: `width:${Math.max(2, 100 * p.total / max)}%` });
@@ -1170,11 +1456,11 @@ function renderTopPosts(top) {
     }
     if (p.total > known) {  // types Facebook didn't show in the bar
       const seg = el("div", { style: `flex:${p.total - known};background:var(--unknown)` });
-      hover(seg, e => showTip(e, fmt(p.total - known), "type not shown by Facebook"));
+      hover(seg, e => showTip(e, fmt(p.total - known), "Facebook 未显示类型"));
       stack.append(seg);
     }
     list.append(el("div", { class: "stack-item" },
-      el("div", { class: "title", title: p.text }, p.text || "(no text)", el("span", { text: p.time_text ? "  · " + p.time_text : "" })),
+      el("div", { class: "title", title: p.text }, p.text || "（无文字）", el("span", { text: p.time_text ? "  · " + p.time_text : "" })),
       el("div", { class: "stack-line" }, el("div", { style: "flex:1;min-width:0" }, stack), el("span", { class: "num", text: `${fmt(p.total)} · ${fmt(p.comments)} 💬 · ${fmt(p.shares)} ↗` }))));
   }
 }
@@ -1216,13 +1502,13 @@ async function loadAnalytics() {
     const k = $("aKpis");
     k.replaceChildren(
       kpiTile("Posts", a.posts, "--c1", '<path d="M4 5h16M4 10h16M4 15h10"/>'),
-      kpiTile("Comments (Facebook's count)", a.real_comments, "--c3", ICON_BUBBLE),
+      kpiTile("评论数（Facebook 统计）", a.real_comments, "--c3", ICON_BUBBLE),
       kpiTile("Reactions", a.reactions, "--c5", ICON_HEART),
       kpiTile("Shares", a.shares, "--c6", ICON_SHARE),
-      kpiTile("Avg comments / post", a.avg_comments, "--c8", ICON_BUBBLE),
-      kpiTile("Avg reactions / post", a.avg_reactions, "--c2", '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>'),
+      kpiTile("平均每帖评论", a.avg_comments, "--c8", ICON_BUBBLE),
+      kpiTile("平均每帖互动", a.avg_reactions, "--c2", '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>'),
       kpiTile("Posts with comments", a.with_comments_pct, "--c7", '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', "%"),
-      kpiTile("Authors (hashed)", a.unique_authors, "--c4", '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/>'));
+      kpiTile("作者（已哈希）", a.unique_authors, "--c4", '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/>'));
     renderDonut(a.reactions_by_type, a.reaction_sources, a.reactions);
     renderPerDay(a.posts_per_day);
     renderHeatmap(a.heatmap, a.heatmap_posts);
@@ -1230,13 +1516,288 @@ async function loadAnalytics() {
     renderCols("reactionHist", a.reaction_buckets, "--c5", n => `${n} reactions`);
     renderCols("commentHist", a.comment_distribution, "--c3", n => `${n} comments`);
     $("commentHistSub").textContent = a.counted_posts < a.posts
-      ? `Facebook's own count · ${fmt(a.counted_posts)} of ${fmt(a.posts)} posts have it (older posts get it with "Update saved posts")`
-      : "Facebook's own count for each post";
-    renderBars("phrases", a.top_phrases, "--c1", n => `posts mention "${n}"`, "No phrases yet");
+      ? `Facebook's own count · ${fmt(a.counted_posts)} of ${fmt(a.posts)} posts have it (older posts get it with "Update 已保存 posts")`
+      : "Facebook 自身统计的评论数";
+    renderBars("phrases", a.top_phrases, "--c1", n => `posts mention "${n}"`, "暂无短语");
   } finally {
     analyticsBusy = false;
   }
 }
+
+// ---------- opportunities / demand ----------
+let oppAll = [], oppShown = 0, oppReq = 0, oppSearchTimer;
+const OPP_PAGE = 20;
+
+function oppParams() {
+  const params = new URLSearchParams({
+    days: $("oppDays").value,
+    kind: $("oppKind").value,
+    sort: $("oppSort").value,
+    q: $("oppSearch").value.trim(),
+    hide_reviewed: $("oppHideReviewed").checked ? "1" : "0",
+    limit: "500",
+  });
+  return params;
+}
+function updateOppExport() {
+  const params = oppParams();
+  params.set("format", "csv");
+  $("oppExport").href = "/api/opportunities?" + params.toString();
+}
+function copyText(text, btn) {
+  const done = () => { btn.textContent = "已复制"; setTimeout(() => { btn.textContent = "复制原文"; }, 1400); };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done).catch(() => copyFallback(text, done));
+  } else copyFallback(text, done);
+}
+function copyFallback(text, done) {
+  const area = el("textarea", { style: "position:fixed;left:-9999px;top:0" });
+  area.value = text;
+  document.body.append(area);
+  area.select();
+  try { document.execCommand("copy"); done(); } catch {}
+  area.remove();
+}
+
+function oppCard(p, showGroup = false) {
+  const card = el("article", { class: "card post" });
+  if (p.reviewed_at) card.classList.add("reviewed");
+  const reviewedTag = reviewBadge(p);
+  const head = el("div", { class: "post-head" },
+    el("span", { class: "author-chip", title: "作者（已哈希）", text: p.author || "unknown" }),
+    el("span", { text: p.time_text || "" }),
+    p.posted_at ? el("span", { text: "· " + new Date(p.posted_at).toLocaleString([], {
+      dateStyle: "medium", ...(p.date_approx ? {} : { timeStyle: "short" }) }) + (p.date_approx ? " (approx.)" : "") }) : null,
+    p.scraped_at ? el("span", { class: "scraped-tag", title: "本机抓取这条帖子的时间", text: "抓取于 " + scrapedLabel(p.scraped_at) }) : null,
+    reviewedTag,
+    el("span", { class: "opp-score", title: "需求/互动/新鲜度综合分" }, "分数 ", el("strong", { text: fmt(p.score) })));
+  if (showGroup && p.group) {
+    head.append(el("a", {
+      class: "author-chip", href: p.group_url || "#", target: "_blank", rel: "noopener noreferrer",
+      title: "打开群组", text: "群组 " + p.group, style: "text-decoration:none",
+    }));
+  }
+  card.append(head);
+  if (p.tags && p.tags.length) {
+    const tags = el("div", { class: "opp-tags" });
+    for (const tag of p.tags) {
+      const cls = tag === "高意向" ? "lead" : tag === "需求" ? "demand" : tag === "卖家帖" ? "seller"
+        : tag === "热帖" ? "hot" : tag === "讨论多" ? "discussed" : tag === "新" ? "fresh" : "";
+      tags.append(el("span", { class: "opp-tag " + cls, text: tag }));
+    }
+    card.append(tags);
+  }
+  const text = el("div", { class: "post-text", text: p.text || "（无文字）" });
+  card.append(text);
+  const translation = el("div", { class: "post-text", style: "margin-top:8px;color:var(--text-secondary);display:none" });
+  card.append(translation);
+  enqueueTranslate(p.text || "", translation);
+  const toggle = el("button", { type: "button", class: "linkish", text: "展开全文",
+    style: "margin-top:6px;font-size:13px;display:none" });
+  toggle.addEventListener("click", () => {
+    const open = text.classList.toggle("open");
+    toggle.textContent = open ? "收起" : "展开全文";
+  });
+  card.append(toggle);
+  requestAnimationFrame(() => {
+    if (text.scrollHeight > text.clientHeight + 2) toggle.style.display = "inline-flex";
+  });
+  const matches = [];
+  if (p.focus_hits && p.focus_hits.length) matches.push(["产品词", p.focus_hits.join("、")]);
+  if (p.strong_demand_hits && p.strong_demand_hits.length) matches.push(["强买家语", p.strong_demand_hits.join("、")]);
+  if (p.demand_hits && p.demand_hits.length) matches.push([p.demand_ok ? "需求词" : "疑似需求词（已排除）", p.demand_hits.join("、")]);
+  if (p.seller_hits && p.seller_hits.length) matches.push(["卖家词", p.seller_hits.join("、")]);
+  if (p.supply_hits && p.supply_hits.length) matches.push(["供应词", p.supply_hits.join("、")]);
+  if (matches.length) {
+    const row = el("div", { class: "opp-match" });
+    for (const [label, value] of matches) row.append(el("span", {}, el("b", { text: label + "：" }), value));
+    card.append(row);
+  }
+  const foot = el("div", { class: "post-foot" },
+    el("span", { class: "stat" }, icon(ICON_HEART), `${fmt(p.reaction_count || 0)} 个互动`),
+    el("span", { class: "stat" }, icon(ICON_BUBBLE),
+      (p.comment_count != null ? `${fmt(p.comment_count)} 条评论 · ` : "") + `${p.comments_saved || 0} 已保存`),
+    p.share_count != null ? el("span", { class: "stat" }, icon(ICON_SHARE), `${fmt(p.share_count)} 次转发`) : null);
+  card.append(foot);
+  const actions = el("div", { class: "opp-actions" });
+  if (p.url) actions.append(el("a", { href: p.url, target: "_blank", rel: "noopener noreferrer", text: "打开原帖 ↗" }));
+  else if (p.search_url) actions.append(el("a", {
+    href: p.search_url, target: "_blank", rel: "noopener noreferrer",
+    title: "这条是旧数据，当时没抓到原帖链接；重新抓取后会自动补上。现在可先在群内搜索这段文字",
+    text: "群内搜索原帖 ↗",
+  }));
+  const translateBtn = el("button", { type: "button", class: "secondary", text: "重新翻译" });
+  translateBtn.addEventListener("click", () => {
+    const cache = loadTranslateCache();
+    delete cache[p.text || ""];
+    saveTranslateCache(cache);
+    translation.style.display = "none";
+    translation.textContent = "";
+    delete translation.dataset.done;
+    enqueueTranslate(p.text || "", translation);
+  });
+  actions.append(translateBtn);
+  actions.append(reviewButton(p, card, reviewedTag));
+  const copy = el("button", { type: "button", class: "secondary", text: "复制原文" });
+  copy.addEventListener("click", () => copyText(p.text || "", copy));
+  actions.append(copy);
+  actions.append(el("span", { class: "notice", text: p.date_approx ? "日期来自抓取时间，仅供参考" : "" }));
+  card.append(actions);
+  if (p.comments && p.comments.length) {
+    const det = el("details", { class: "comments" },
+      el("summary", { text: `查看 ${p.comments.length} 条已抓评论` }));
+    for (const c of p.comments) {
+      det.append(el("div", { class: "comment" },
+        el("span", { class: "author-chip", text: c.author || "unknown" }), el("span", { text: c.text })));
+    }
+    card.append(det);
+  }
+  return card;
+}
+
+function renderOpportunities(report) {
+  const s = report.summary || {};
+  const summaryBits = [
+    el("span", {}, "Posts ", el("b", { text: fmt(s.posts) })),
+    el("span", {}, "高意向 ", el("b", { text: fmt(s.leads) })),
+    el("span", {}, "需求 ", el("b", { text: fmt(s.demand) })),
+    el("span", {}, "热帖 ", el("b", { text: fmt(s.hot) })),
+    el("span", {}, "讨论多 ", el("b", { text: fmt(s.discussed) })),
+    el("span", {}, "近 7 天 ", el("b", { text: fmt(s.fresh) })),
+    el("span", {}, "热帖门槛 ", el("b", { text: fmt(s.hot_threshold) }), " 赞"),
+    el("span", {}, "讨论门槛 ", el("b", { text: fmt(s.discussion_threshold) }), " 评论"),
+  ];
+  if (s.undated_posts) summaryBits.push(el("span", { text: `${fmt(s.undated_posts)} 条无发布日期（按抓取时间估算）` }));
+  $("oppSummary").replaceChildren(...summaryBits);
+  $("oppKpis").replaceChildren(
+    kpiTile("高意向线索", s.leads, "--c5", '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>'),
+    kpiTile("需求帖", s.demand, "--c2", '<path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/>'),
+    kpiTile("热帖", s.hot, "--c8", ICON_HEART),
+    kpiTile("讨论多", s.discussed, "--c3", ICON_BUBBLE),
+    kpiTile("近 7 天", s.fresh, "--c6", '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'));
+  renderBars("oppFocus", s.focus_counts || [], "--c2", n => `帖子提到“${n}”`, "还没有命中产品词；去 Settings → Demand analysis 添加你的产品名");
+  renderBars("oppDemandWords", s.demand_counts || [], "--c1", n => `含“${n}”的需求帖`, "还没有需求词命中");
+  const daily = (s.daily || []).slice(-21).map(x => [x.date.slice(5), x.demand]);
+  renderBars("oppDaily", daily, "--c3", n => `${n} 的需求帖`, "还没有带日期的帖子");
+  renderBars("oppTopics", s.top_topics || [], "--c1", n => `帖子提到“${n}”`, "还没有足够文本");
+
+  oppAll = report.posts || [];
+  oppShown = Math.min(OPP_PAGE, oppAll.length);
+  const list = $("oppList");
+  list.replaceChildren();
+  if (!oppAll.length) {
+    list.append(el("div", { class: "card empty", text: "这个范围里没有匹配的帖子。试试更长时间、清空搜索，或先在 Settings 添加产品词。" }));
+  } else {
+    for (const p of oppAll.slice(0, oppShown)) list.append(oppCard(p));
+  }
+  $("oppCount").textContent = `${fmt(report.total || 0)} 条 · 显示 ${fmt(oppShown)}`;
+  $("oppMore").hidden = oppShown >= oppAll.length;
+  updateOppExport();
+}
+
+let leadReq = 0, leadCacheKey = "", leadCacheSort = "score", leadCacheAt = 0;
+async function loadLeads(force = false) {
+  const hide = $("oppHideReviewed").checked ? "1" : "0";
+  const key = $("oppDays").value + "|" + hide;
+  const sort = $("oppSort").value;
+  if (!force && key === leadCacheKey && sort === leadCacheSort && Date.now() - leadCacheAt < 5000) return;
+  const req = ++leadReq;
+  const params = new URLSearchParams({ days: $("oppDays").value, hide_reviewed: hide, sort, limit: "100" });
+  $("leadExport").href = "/api/leads?" + new URLSearchParams({
+    format: "csv", days: $("oppDays").value, hide_reviewed: hide, sort, limit: "500",
+  }).toString();
+  try {
+    const report = await (await fetch("/api/leads?" + params.toString())).json();
+    if (req !== leadReq) return;
+    leadCacheKey = key;
+    leadCacheSort = sort;
+    leadCacheAt = Date.now();
+    renderLeads(report);
+  } catch {
+    $("leadCount").textContent = "读取失败";
+  }
+}
+function renderLeads(report) {
+  const s = report.summary || {};
+  const posts = report.posts || [];
+  $("leadCount").textContent = `${fmt(report.total || 0)} 条高意向 · ${fmt(s.groups || 0)} 个群组`;
+  const list = $("leadList");
+  list.replaceChildren();
+  if (!posts.length) {
+    list.append(el("div", { class: "card empty", text: "这个时间范围里没有高意向线索。试试更长时间，或到 Settings 调整产品词和卖家词。" }));
+    return;
+  }
+  for (const p of posts) list.append(oppCard(p, true));
+}
+
+async function loadOutreach() {
+  const list = $("outreachList");
+  const status = $("outreachStatus");
+  if (!list || !status) return;
+  let d;
+  try { d = await (await fetch("/api/outreach")).json(); }
+  catch { status.textContent = "读取失败"; return; }
+  if (d.error) { status.textContent = "读取失败：" + d.error; list.replaceChildren(); return; }
+  const limit = d.limit || 0;
+  status.textContent = d.enabled
+    ? `已开启 · 今天 ${d.today || 0}/${limit} 条 · 间隔 ${d.min_minutes}-${d.max_minutes} 分钟`
+    : `未开启 · 今天 ${d.today || 0}/${limit} 条（到 Settings → 自动回复 开启）`;
+  list.replaceChildren();
+  const pending = d.pending || [];
+  if (!d.enabled) {
+    list.append(el("div", { class: "card empty", text: "自动回复还没开启。到 Settings → 自动回复 打勾，并在文案里保留 {product} 和 {url} 占位符。" }));
+    return;
+  }
+  if (!pending.length) {
+    list.append(el("div", { class: "card empty", text: "暂时没有需要自动回复的新帖子（要求：有原帖链接、高意向、产品匹配、之前没回复过）。" }));
+  }
+  for (const p of pending.slice(0, 20)) {
+    const card = el("div", { class: "post opp" });
+    card.append(el("div", { class: "post-head" },
+      el("span", { class: "author-chip", text: p.group || "" }),
+      el("span", { class: "opp-tag lead", text: p.product || "产品" })));
+    card.append(el("div", { class: "post-text", text: p.text || "" }));
+    card.append(el("div", { class: "opp-match" }, el("b", { text: "将回复：" }), p.reply || ""));
+    const actions = el("div", { class: "opp-actions" });
+    if (p.url) actions.append(el("a", { href: p.url, target: "_blank", rel: "noopener noreferrer", text: "打开原帖 ↗" }));
+    const copy = el("button", { type: "button", class: "secondary", text: "复制回复" });
+    copy.addEventListener("click", () => copyText(p.reply || "", copy));
+    actions.append(copy);
+    card.append(actions);
+    list.append(card);
+  }
+}
+
+async function loadOpportunities(reset) {
+  const req = ++oppReq;
+  updateOppExport();
+  loadLeads();
+  loadOutreach();
+  const params = oppParams();
+  params.set("limit", "500");
+  let report;
+  try { report = await (await fetch("/api/opportunities?" + params.toString())).json(); }
+  catch { $("oppSummary").textContent = "读取失败：dashboard 还在运行吗？"; return; }
+  if (req !== oppReq) return;
+  renderOpportunities(report);
+}
+$("oppRefresh").addEventListener("click", () => { loadOpportunities(true); loadLeads(true); loadOutreach(); });
+$("oppDays").addEventListener("change", () => loadOpportunities(true));
+$("oppKind").addEventListener("change", () => loadOpportunities(true));
+$("oppHideReviewed").addEventListener("change", () => { loadOpportunities(true); loadLeads(true); });
+$("oppSort").addEventListener("change", () => { loadOpportunities(true); loadLeads(true); });
+$("oppSearch").addEventListener("input", () => {
+  clearTimeout(oppSearchTimer);
+  oppSearchTimer = setTimeout(() => loadOpportunities(true), 250);
+});
+$("oppMore").addEventListener("click", () => {
+  const list = $("oppList");
+  const next = Math.min(oppAll.length, oppShown + OPP_PAGE);
+  for (const p of oppAll.slice(oppShown, next)) list.append(oppCard(p));
+  oppShown = next;
+  $("oppCount").textContent = `${fmt(oppAll.length)} 条 · 显示 ${fmt(oppShown)}`;
+  $("oppMore").hidden = oppShown >= oppAll.length;
+});
 
 // ---------- log ----------
 async function loadLog() {
@@ -1250,7 +1811,7 @@ async function loadLog() {
 for (const id of ["logFilter", "logProblems"]) $(id).addEventListener("input", loadLog);
 
 // ---------- settings ----------
-const CHOICE_LABELS = { "": "Auto (Chromium, then Chrome, then Edge)", chromium: "Playwright Chromium", chrome: "Google Chrome", msedge: "Microsoft Edge" };
+const CHOICE_LABELS = { "": "自动（Chromium，然后 Chrome，然后 Edge）", chromium: "Playwright Chromium", chrome: "Google Chrome", msedge: "Microsoft Edge" };
 let schema = {}, loadedValues = {};
 
 function renderSettings(payload) {
@@ -1266,7 +1827,7 @@ function renderSettings(payload) {
       box.append(groups[spec.group]);
     }
     const value = payload.values[key], id = "set_" + key;
-    const field = el("div", { class: "field" + (spec.type === "bool" ? " check" : "") });
+    const field = el("div", { class: "field" + (spec.type === "bool" ? " 选中" : "") });
     field.dataset.key = key;
     const label = el("label", { for: id, text: spec.label });
     let input;
@@ -1306,6 +1867,18 @@ function renderSettings(payload) {
     for (const [other] of spec.disabled_when) $("set_" + other).addEventListener("change", sync);
     sync();
   }
+  // Use the 已保存 look-back setting the first time; later the tab's own
+  // selector is the user's choice until the page is reloaded.
+  const daySel = $("oppDays");
+  if (!daySel.dataset.init) {
+    const wanted = String(payload.values.OPPORTUNITY_DAYS || 30);
+    if (!Array.from(daySel.options).some(o => o.value === wanted)) {
+      daySel.append(el("option", { value: wanted, text: `近 ${wanted} 天` }));
+    }
+    daySel.value = wanted;
+    daySel.dataset.init = "1";
+    if (typeof loadLeads === "function") loadLeads(true);
+  }
 }
 function showErrors(errors) {
   document.querySelectorAll("#settingsFields .field").forEach(f => {
@@ -1323,7 +1896,10 @@ async function saveSettings() {
     const input = $("set_" + key);
     if (!input) continue;
     let value = spec.type === "bool" ? input.checked : input.value;
-    if (spec.type === "list") value = value.split(/[\s,]+/).map(v => v.trim().replace(/\/+$/, "")).filter(Boolean);
+    // Lists are one per line (commas also work). Don't split on spaces: a
+    // keyword such as "looking for" must stay one term.
+    if (spec.type === "list") value = value.split(/[\n,]+/).map(v => v.trim()).filter(Boolean)
+      .map(v => v.startsWith("http") ? v.replace(/\/+$/, "") : v);
     // Only send what changed, so an unusual value from .env doesn't block saving others
     if (JSON.stringify(spec.type === "list" ? value : String(value)) !==
         JSON.stringify(spec.type === "list" ? loadedValues[key] : String(loadedValues[key]))) values[key] = value;
@@ -1332,22 +1908,27 @@ async function saveSettings() {
   const body = await (await postJSON("/api/settings", { values })).json();
   showErrors(body.errors);
   $("settingsNotice").textContent = body.message;
-  if (body.ok) { renderSettings(body); refreshStats(); }
+  if (body.ok) {
+    renderSettings(body);
+    refreshStats();
+    if (currentTab === "opportunities") { loadOpportunities(true); loadLeads(true); }
+  }
   return { ok: body.ok, changed: true };
 }
 $("settingsForm").addEventListener("submit", async e => {
   e.preventDefault();
   const { changed } = await saveSettings();
-  if (!changed) $("settingsNotice").textContent = "Nothing changed.";
+  if (!changed) $("settingsNotice").textContent = "没有变化。";
   refreshStats();
 });
 $("resetSettings").addEventListener("click", async () => {
-  if (!confirm("Discard the settings saved from the dashboard and go back to .env values?")) return;
+  if (!confirm("Discard the settings 已保存 from the dashboard and go back to .env values?")) return;
   const body = await (await postJSON("/api/settings", { reset: true })).json();
   showErrors({});
   $("settingsNotice").textContent = body.message;
   renderSettings(body);
   refreshStats();
+  if (currentTab === "opportunities") { loadOpportunities(true); loadLeads(true); }
 });
 
 // ---------- account ----------
@@ -1358,14 +1939,16 @@ let account = null, accountTimer = null;
 function renderLoginAlert(d) {
   // A run that ended on a login page, or no login at all: point to the Account tab
   const s = d.status || {};
-  const needLogin = !d.has_session || (s.state === "blocked" && /login|checkpoint/i.test(s.message || "")
-    && !(d.checkpoint && !d.checkpoint.acknowledged && d.checkpoint_alert));
+  const needLogin = !d.has_session || d.has_saved_session === false
+    || (s.state === "blocked" && /login|checkpoint/i.test(s.message || "")
+        && !(d.checkpoint && !d.checkpoint.acknowledged && d.checkpoint_alert));
   const show = needLogin && currentTab !== "account" && d.login_state !== "done";
   $("loginAlert").hidden = !show;
   $("accountDot").hidden = !needLogin;
   if (show) {
-    $("loginAlertTitle").textContent = d.has_session ? "Facebook asked you to log in again" : "No saved Facebook login";
-    $("loginAlertText").textContent = d.has_session ? "The saved session has expired or was challenged." : "Log in before scraping.";
+    const noSaved = d.has_saved_session === false || !d.has_session;
+    $("loginAlertTitle").textContent = noSaved ? "还没有保存的 Facebook 登录" : "Facebook 要求重新登录";
+    $("loginAlertText").textContent = noSaved ? "Log in before scraping." : "已保存的会话已过期或被挑战。";
   }
 }
 
@@ -1375,22 +1958,22 @@ function renderAccount(a) {
   const icon = $("acctIcon");
   icon.style.setProperty("--accent", ok ? "var(--good)" : "var(--warning)");
   icon.replaceChildren(window.icon ? window.icon(ok ? ICON_OK : ICON_KEY) : "");
-  $("acctTitle").textContent = ok ? "Logged in" : a.vault_exists && !a.unlocked ? "Vault locked" : "Not logged in";
+  $("acctTitle").textContent = ok ? "Logged in" : a.vault_exists && !a.unlocked ? "密码库已锁定" : "未登录";
   $("acctLine").textContent = ok
-    ? `Facebook account ${a.account} · session saved ${a.session_saved_at.replace("T", " ")}. ` +
-      "If scraping sends you to a login page again, log in below to replace it."
-    : a.vault_exists && !a.unlocked ? "Enter your vault passphrase to use or replace the saved login."
+    ? `Facebook account ${a.account} · session 已保存 ${a.session_saved_at.replace("T", " ")}. ` +
+      "如果抓取过程中跳到登录页，请在下方重新登录以替换。"
+    : a.vault_exists && !a.unlocked ? "Enter your vault passphrase to use or replace the 已保存 login."
     : "Log in with one of the two ways below. The session is stored encrypted in data/vault.enc.";
 
-  // Passphrase: create the vault, or unlock it
+  // 密码: create the vault, or unlock it
   const needPass = !a.unlocked;
   $("passCard").hidden = !needPass;
   $("passConfirmField").hidden = a.vault_exists;
   $("unlockRow").hidden = !a.vault_exists;
-  $("passTitle").textContent = a.vault_exists ? "Unlock the vault" : "Choose a vault passphrase";
+  $("passTitle").textContent = a.vault_exists ? "解锁密码库" : "选择密码库密码";
   $("passSub").textContent = a.vault_exists
-    ? "The passphrase you chose when the vault was created."
-    : "At least 8 characters. It encrypts your Facebook login on this computer and can't be recovered, so keep it somewhere safe.";
+    ? "创建密码库时选择的密码。"
+    : "At least 8 characters. It encrypts your Facebook 登录 on this computer and can't be recovered, so keep it somewhere safe.";
 
   $("useSavedField").hidden = !a.has_saved_password;
   $("savedEmail").textContent = a.saved_email || "";
@@ -1440,7 +2023,7 @@ $("loginForm").addEventListener("submit", async e => {
 });
 $("cancelLogin").addEventListener("click", () => accountPost("cancel", {}));
 $("forgetBtn").addEventListener("click", async () => {
-  if (!confirm("Remove the saved email and password from the vault? The current session stays.")) return;
+  if (!confirm("Remove the 已保存 email and password from the vault? The current session stays.")) return;
   await accountPost("forget-password", {});
 });
 $("cookieForm").addEventListener("submit", async e => {
@@ -1456,7 +2039,7 @@ $("cookieForm").addEventListener("submit", async e => {
   }
 });
 
-// ---------- run + checkpoint ----------
+// ---------- run + 选中point ----------
 $("stopBtn").addEventListener("click", async () => {
   if (!confirm("Stop the scrape? It finishes the current scroll, saves everything and closes the browser.")) return;
   $("stopBtn").disabled = true;
@@ -1469,22 +2052,22 @@ $("checkpointAck").addEventListener("click", async () => { await postJSON("/api/
 
 $("runBtn").addEventListener("click", async () => {
   const cp = lastStats && activeCheckpoint(lastStats);
-  if (cp && !confirm(`Facebook showed a checkpoint at ${cp.at.replace("T", " ")}.\n\nRunning again now raises the risk of the account being locked. Start anyway?`)) return;
+  if (cp && !confirm(`Facebook 出现验证/检查点 at ${cp.at.replace("T", " ")}.\n\nRunning again now raises the risk of the account being locked. Start anyway?`)) return;
   if (cp) await postJSON("/api/checkpoint/ack");
-  // Ask once, during this click, so a later checkpoint can raise a desktop notification
+  // Ask once, during this click, so a later 选中point can raise a desktop notification
   if (lastStats && lastStats.checkpoint_alert && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
   $("runBtn").disabled = true;
-  // Unsaved edits in Settings are saved first, so the run uses them
+  // Unsaved edits in Settings are 已保存 first, so the run uses them
   const saved = await saveSettings();
   if (!saved.ok) {
     showTab("settings");
-    $("settingsNotice").textContent = "Not started: fix the highlighted settings first.";
+    $("settingsNotice").textContent = "未开始：请先修改标红的设置。";
     $("runBtn").disabled = false;
     return;
   }
   const body = await (await postJSON("/api/run")).json();
   showTab("overview");
-  $("notice").textContent = saved.changed && body.ok ? "Settings saved. " + body.message : body.message;
+  $("notice").textContent = 已保存.changed && body.ok ? "Settings 已保存. " + body.message : body.message;
   refreshStats();
 });
 
@@ -1500,8 +2083,8 @@ function applyTheme(t) {
   else document.documentElement.setAttribute("data-theme", t);
   const btn = $("themeBtn");
   btn.replaceChildren(icon(THEME_ICONS[t]));
-  btn.title = `Color theme: ${t} (click to change)`;
-  btn.setAttribute("aria-label", `Color theme: ${t}`);
+  btn.title = `颜色主题: ${t} (click to change)`;
+  btn.setAttribute("aria-label", `颜色主题: ${t}`);
   try { localStorage.setItem("theme", t); } catch {}
   if (currentTab === "analytics") loadAnalytics();
 }

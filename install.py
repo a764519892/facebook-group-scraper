@@ -20,6 +20,27 @@ def run(*args):
     subprocess.check_call(args, cwd=HERE)
 
 
+def ensure_env():
+    """Create .env from .env.example with a random salt if it's missing."""
+    env_file = os.path.join(HERE, ".env")
+    if os.path.isfile(env_file):
+        return False
+    # A random, private salt: it's what keeps hashed author names from
+    # being turned back into names (see "Respect others' privacy")
+    with open(os.path.join(HERE, ".env.example"), encoding="utf-8") as f:
+        lines = [f"HASH_SALT={secrets.token_hex(16)}\n" if line.startswith("HASH_SALT=") else line
+                 for line in f]
+    with open(env_file, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+    try:
+        from utils import restrict_private_file
+        restrict_private_file(env_file)
+    except Exception:
+        pass
+    print("\nCreated .env with a random HASH_SALT. Keep .env private and don't change the salt later.")
+    return True
+
+
 if __name__ == "__main__":
     if sys.version_info < (3, 10):
         sys.exit("Python 3.10 or newer is required.")
@@ -36,16 +57,7 @@ if __name__ == "__main__":
         print("\nOn Linux, if Chromium fails to start, install its system libraries with:")
         print(f"  sudo {PY} -m playwright install-deps chromium")
 
-    env_file = os.path.join(HERE, ".env")
-    if not os.path.isfile(env_file):
-        # A random, private salt: it's what keeps hashed author names from
-        # being turned back into names (see "Respect others' privacy")
-        with open(os.path.join(HERE, ".env.example"), encoding="utf-8") as f:
-            lines = [f"HASH_SALT={secrets.token_hex(16)}\n" if line.startswith("HASH_SALT=") else line
-                     for line in f]
-        with open(env_file, "w", encoding="utf-8") as f:
-            f.writelines(lines)
-        print("\nCreated .env with a random HASH_SALT. Keep .env private and don't change the salt later.")
+    ensure_env()
 
     py = os.path.relpath(PY, HERE)
     print(f"""

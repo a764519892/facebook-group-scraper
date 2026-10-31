@@ -58,6 +58,9 @@ def main():
     ensure_venv()
     os.chdir(HERE)
 
+    import install
+    install.ensure_env()
+
     import dashboard
     from secret_store import VaultError, unlock, vault_exists
 

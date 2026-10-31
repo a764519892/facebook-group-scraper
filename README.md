@@ -36,6 +36,7 @@ test suite runs on all three systems on every push.
 - [Sử dụng có trách nhiệm (tiếng Việt)](#sử-dụng-có-trách-nhiệm-tiếng-việt)
 - [Quick start](#quick-start)
 - [The dashboard](#the-dashboard)
+- [Finding buyer demand in yarn groups (需求机会)](#finding-buyer-demand-in-yarn-groups-需求机会)
 - [Logging in](#logging-in)
 - [Output files](#output-files)
 - [Settings](#settings)
@@ -117,12 +118,22 @@ data, with all the care that implies.
   random salt is generated on install). Real names never reach the disk.
 - Your Facebook session (and optional password) stored in one file encrypted
   with a passphrase you choose (scrypt + Fernet). No OS keychain needed.
-- Dashboard only reachable from your own computer; other websites can't drive it.
+- Dashboard bound to `localhost` by default; a Host-header allowlist and an
+  Origin check stop other websites and DNS-rebinding tricks from driving it.
+  Wrong vault passphrases are rate-limited, and request bodies are capped.
 - Data, logins and settings are all git-ignored.
 
 **Dashboard** (http://localhost:8765)
-- Overview, Posts (search and sort), Analytics (charts), Settings, Log, Account
-  (log in again by browser window or by pasting cookies), light/dark theme.
+- Overview, Posts (search and sort), Analytics (charts), **需求机会 / Opportunities**
+  (recent demand, hot posts and discussions matched to your product words),
+  Settings, Log, Account (log in again by browser window or by pasting cookies),
+  light/dark theme.
+- The Opportunities tab scores posts by reactions, comments, shares, buyer
+  intent, product-word hits and recency; tags high-intent leads separately and
+  exports the selected view to CSV.
+- Posts show their local scrape time. **标记已参考** dims a post and remembers it
+  across restarts; **隐藏已参考** filters reviewed posts from Posts, Opportunities
+  and cross-group Leads.
 
 **Runs anywhere**
 - One command to install and start on Windows, macOS and Linux; Docker image;
@@ -263,6 +274,7 @@ showing checks, and stop for the day when it does.
 | **Overview** | Status and progress of the current run (posts, scrolls, page memory), totals, latest log lines and posts |
 | **Posts** | Every saved post with reactions, comment/share counts and saved comments; search (also in comments); sort by newest, reactions, comments or shares |
 | **Analytics** | Reaction mix, posts per day, when people post (weekday × hour), most-reacted posts, reactions/comments per post, top phrases |
+| **需求机会 / Opportunities** | A cross-group **高意向线索** list plus recent demand, hot posts and busy discussions, filtered by look-back period, post type and text. Shows product-word/demand-word counts, tags, a transparent score and a one-click CSV export |
 | **Settings** | All options; unsaved changes are saved when you click **Start scrape** |
 | **Log** | The full run log with a filter and a "problems only" switch |
 | **Account** | Log in again: browser window or pasted cookies; vault passphrase |
@@ -274,6 +286,86 @@ scrape runs, **Stop** finishes the current scroll, saves and closes the browser.
 
 Post dates in Analytics are worked out from Facebook's time labels and the
 moment each post was scraped, so they are approximate.
+
+### Finding buyer demand in yarn groups (需求机会)
+
+The **需求机会** tab is for questions such as “who is asking for yarn or crochet
+materials right now?” and “which posts are getting the most discussion?”. It is
+a reading aid, not an auto-poster.
+
+1. In **Settings → Demand analysis**, put your exact product names in
+   **重点产品词**. The defaults cover `len`, `sợi`, `milk`, `milk cotton`,
+   `cotton`, `nhung`, `nhung gấu`, `chenille`, `baby`, `sữa`, `lông cừu`,
+   `dệt kim`, `dệt trơn`, `kim tuyến`, `cloudcandy`, `loang`, `kim móc` and
+   `búp bê`. Add your own names.
+2. Adjust **买家需求词** (`cần`, `mua`, `tìm`, `cần mua`, `tìm địa chỉ`,
+   `mua ở đâu`, `looking for`…) and **卖家/同行词** (`bán`, `pass`,
+   `thanh lý`, `sỉ`, `sẵn`, `shop`…). Lists are one term per line; spaces
+   inside English phrases are kept.
+3. Keep **需求必须同时命中产品词** on. This prevents a generic `cần` / `mua`
+   from being counted as demand. **卖家/清仓词** then removes posts whose own
+   text is selling or clearing stock; **强买家短语** (`tìm địa chỉ`,
+   `shop nào`, `tìm len`…) can override that when the post is clearly a buyer.
+   Use **Ignore words** for recruitment, contact lenses or unrelated posts.
+4. Open **需求机会**, choose 7/30/90 days or all time, and filter to
+   **只看高意向线索**, **只看需求**, **只看热帖**, **只看讨论多**, or
+   **只看供应/同行**.
+
+The **高意向线索 · 跨群组** card at the top aggregates high-intent buyers from
+every configured group, even while the group selector is set to one group. It
+has its own **下载高意向 CSV** link. The list below it is the selected group's
+full Opportunities view.
+
+Each post is tagged with `高意向` (a strong buyer phrase or a quantity request),
+`需求` (product word + buyer intent, not suppressed by seller words), `供应`
+(supply-only), `卖家帖` (contains seller words and was removed from demand),
+`热帖` (top quarter by reactions), `讨论多` (top quarter by comments) and `新`
+(last 7 days). The score is `reactions + 2×comments + 3×shares + demand/lead
+bonuses + recency`; the exact matched words are shown on every card, and the
+**下载 CSV** button exports everything currently displayed.
+
+If a saved post has no Facebook permalink, the card shows **群内搜索原帖 ↗**.
+That opens the group's search with the post's most distinctive sentence, so you
+can find the original while logged in. New scrapes now read the numeric post id
+from the timestamp link, photo link (`set=gm.…`), `story_fbid`, or post
+attributes and show **打开原帖 ↗** instead. When an old hash-keyed post is seen
+again, the scraper keeps its old row (so comments/reactions stay attached) and
+fills in the real URL. A post with no Facebook publish date is marked `日期近似`
+because its age comes from the scrape time.
+
+## 自动回复（网站推广）
+
+`outreach.py` 会在抓取结束后，自动回复“高意向买家 + 产品匹配你网站”的帖子，
+内容包含产品名和 `https://handmade.wandalink.com/` 链接。在 **Settings → 自动回复**
+里勾选开关即可启用。
+
+安全限制（都在 Settings 里可调）：
+
+| 限制 | 默认 |
+|---|---|
+| 每天最多回复 | 5 条 |
+| 两条之间间隔 | 3-8 分钟 |
+| 只看最近 | 7 天的帖子 |
+| 连续失败几次停止 | 2 次 |
+| Facebook 要求验证 | 立即停止 |
+
+其它规则：
+
+- 只回复**有原帖链接**的帖子；旧 `h_...` 帖子没有 URL 会被跳过。
+- 只回复明确求购的句子（如 “cần 30 cuộn len”、“ai bán…”），
+  卖家清仓、报价单、教程/图解帖会被排除。
+- 产品按类别匹配：毛线求购不会推钩针或成品娃娃。
+- 每条帖子只回复一次，记录在 `data/outreach.json`。
+- 网站产品目录缓存在 `data/products_cache.json`，一天更新一次。
+
+在 **需求机会** tab 的「自动回复 · 网站推广」卡片里可以看到待发送的预览，
+包括将发送的原文和回复；也可以手动复制回复、打开原帖。
+
+只想预览不发送：
+
+```bash
+python outreach.py --dry-run
+```
 
 ## Logging in
 
@@ -308,6 +400,7 @@ Everything is written to `data/` (git-ignored):
 | `groups/<group>/reactions.csv` | post_id, total, like, love, care, haha, wow, sad, angry, comment_count, share_count, source, scraped_at, updated_at |
 | `settings.json` | settings saved from the dashboard |
 | `status.json`, `logs.txt` | live progress and the run log |
+| `run.lock` | OS-level “one scrape at a time” lock; safe to leave in place |
 | `vault.enc` | your encrypted login |
 
 `<group>` is the part of the URL after `/groups/`. Join a group's files on
@@ -350,10 +443,19 @@ greyed out.
 | Don't load images, videos, fonts | on | Big RAM and data saver |
 | Reopen the page above (MB) | 1200 | 0 = never |
 | Browser / hide window | auto / off | Chromium, then Chrome, then Edge |
+| Demand look-back | 30 days | Default period for the **需求机会** tab |
+| Product words | `len`, `sợi`, `milk`, `nhung`, `kim móc`… | One term per line; demand must also hit one of these |
+| Buyer/demand words | `cần`, `mua`, `tìm`, `tìm địa chỉ`… | Only a demand signal together with a product word |
+| Strong buyer phrases | `tìm len`, `mua len`, `shop nào`… | Can override seller words when the post is clearly a buyer |
+| Seller/competitor words | `bán`, `pass`, `thanh lý`, `sỉ`, `sẵn`… | Tagged `供应` only when it has no valid demand |
+| Seller blockers | `pass`, `thanh lý`, `sẵn`, `shop`, `ib`… | Post text containing these is not tagged `需求` unless a strong buyer phrase appears |
+| Demand requires product word | on | Prevents generic `cần` / `mua` false positives |
+| Ignore words | recruitment, `lens`, `kính`… | Skip matching posts entirely |
 | **Hash author names** | on | **Keep it on.** Names become salted SHA-256 codes before saving; see [Respect others' privacy](#respect-others-privacy) |
 
 Only in `.env`: `HASH_SALT`, `DATA_DIR`, `DASHBOARD_HOST`, `DASHBOARD_PORT`,
-`SCRAPER_PASSPHRASE` (servers/Docker only).
+`DASHBOARD_ALLOWED_HOSTS` (LAN access only), `SCRAPER_PASSPHRASE`
+(servers/Docker only).
 
 ## How it works
 
@@ -389,8 +491,11 @@ python -m unittest discover -s tests -t . -v
 
 They cover number/date/cookie parsing, settings validation, the encrypted
 vault, and full scrapes (posts, comments, reactions, counts, second runs,
-batches, several groups). GitHub Actions runs them on Ubuntu, macOS and
-Windows with Python 3.10 and 3.12, and builds the Docker image.
+batches, several groups), plus regression tests for Host/Origin protection,
+CSV formula safety, group-path safety, fallback post keys, date formats,
+demand/supply classification and the Opportunities CSV export. GitHub Actions
+runs them on Ubuntu, macOS and Windows with Python 3.10 and 3.12, and builds
+the Docker image.
 
 Facebook changes its page structure from time to time; if the scraper stops
 finding posts, update the selectors in `scraper.py` (`EXTRACT_JS`,
@@ -418,7 +523,8 @@ PowerShell use `-v "${PWD}/data:/app/data"`.
 | `dashboard.py`, `dashboard.html` | Local web dashboard and its API |
 | `scraper.py` | Feed reading, batches, memory handling (`main.py` runs one scrape) |
 | `reactions.py` | Reaction / comment / share counts |
-| `analytics.py` | Data for the Posts and Analytics tabs |
+| `analytics.py` | Data for the Posts, Analytics and Opportunities tabs, CSV export |
+| `reviewed.py` | Persistent “already reviewed” marks (`data/reviewed.json`) |
 | `config.py` | Settings, defaults and validation |
 | `secret_store.py` | Encrypted vault |
 | `login.py`, `import_session.py`, `set_credentials.py` | Logging in from the terminal |

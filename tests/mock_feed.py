@@ -11,13 +11,22 @@ def comment(post_id, n, reply=False):
             f"<div dir='auto'>Bình luận {n} của bài {post_id}</div><span>5 bình luận</span>{inner}</div>")
 
 
-def post(i, base_id, group):
+def post(i, base_id, group, link_kind="post"):
     pid = base_id + i
     likes = 10 + i
+    if link_kind == "photo":
+        # Some Facebook layouts show the post id through a photo link
+        # ("set=gm.<post_id>") instead of a clickable timestamp.
+        post_link = ""
+        photo_link = (f"<a href='https://www.facebook.com/photo/?fbid={900000 + pid}"
+                      f"&set=gm.{pid}&idorvanity=123'><span>photo</span></a>")
+    else:
+        post_link = f"<a href='https://www.facebook.com/groups/{group}/posts/{pid}/'>{i + 1} giờ</a>"
+        photo_link = ""
     return (
         f"<div><div aria-posinset='{i}' role='article' style='height:520px'>"
         f"<h3><a><strong>Tác giả {i % 3}</strong></a></h3>"
-        f"<a href='https://www.facebook.com/groups/{group}/posts/{pid}/'>{i + 1} giờ</a>"
+        f"{post_link}{photo_link}"
         f"<div data-ad-rendering-role='story_message'><div dir='auto'><span id='t{pid}'>Bài {pid} đoạn đầu…</span> "
         f"<div role='button' onclick=\"document.getElementById('t{pid}').textContent='Bài {pid} đầy đủ';"
         f"this.outerHTML='<div role=button>Ẩn bớt</div>'\">Xem thêm</div></div></div>"
@@ -30,9 +39,9 @@ def post(i, base_id, group):
     )
 
 
-def write_feed(folder, name, count=30, base_id=5000, group="testgroup"):
+def write_feed(folder, name, count=30, base_id=5000, group="testgroup", link_kind="post"):
     """Write <folder>/<name>.html and return its file:// URL."""
-    posts = "".join(post(i, base_id, group) for i in range(count))
+    posts = "".join(post(i, base_id, group, link_kind) for i in range(count))
     html = f"""<!doctype html><html><head><meta charset="utf-8"></head><body>
 <div role='feed' id='f'></div><template id='all'>{posts}</template>
 <template id='more'>{"".join(comment("PID", n) for n in (3, 4, 5))}</template>
