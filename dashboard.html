@@ -1896,9 +1896,10 @@ async function saveSettings() {
     const input = $("set_" + key);
     if (!input) continue;
     let value = spec.type === "bool" ? input.checked : input.value;
-    // Lists are one per line (commas also work). Don't split on spaces: a
-    // keyword such as "looking for" must stay one term.
-    if (spec.type === "list") value = value.split(/[\n,]+/).map(v => v.trim()).filter(Boolean)
+    // Lists are one per line (commas also work, unless the schema asks for a
+    // different separator). Don't split on spaces: a keyword such as
+    // "looking for" must stay one term, and a reply template may contain commas.
+    if (spec.type === "list") value = value.split(spec.split ? new RegExp(spec.split) : /[\n,]+/).map(v => v.trim()).filter(Boolean)
       .map(v => v.startsWith("http") ? v.replace(/\/+$/, "") : v);
     // Only send what changed, so an unusual value from .env doesn't block saving others
     if (JSON.stringify(spec.type === "list" ? value : String(value)) !==

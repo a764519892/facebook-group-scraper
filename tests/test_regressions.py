@@ -47,6 +47,14 @@ class Security(unittest.TestCase):
         self.assertEqual(errors, {})
         self.assertEqual(values["DEMAND_KEYWORDS"], ["looking for", "how much"])
 
+    def test_reply_templates_keep_commas(self):
+        # Templates are one per line; a comma inside a sentence is part of it.
+        line = "Chào bạn, mình có {product}. Xem tại {url}, cảm ơn!"
+        values, errors = validate_settings({"AUTO_REPLY_TEMPLATES": line + "\n" + "Hi bạn, có {product} nha"})
+        self.assertEqual(errors, {})
+        self.assertEqual(values["AUTO_REPLY_TEMPLATES"],
+                         ["Chào bạn, mình có {product}. Xem tại {url}, cảm ơn!", "Hi bạn, có {product} nha"])
+
 
 class ScraperFixes(unittest.TestCase):
     class Page:

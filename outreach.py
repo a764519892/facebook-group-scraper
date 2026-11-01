@@ -185,6 +185,14 @@ _SELLER_RE = re.compile(
     r"nhận đơn|nhận móc|chốt đơn|mời các|link web|web em|qua web|"
     r"\d+\s*k\s*/\s*(?:cuộn|cuon|bó|bo|cái|cai|túi|tui|set|chiếc|chiec))", re.I)
 
+# Someone complaining about a previous seller is not a good place to advertise:
+# a promotional reply there reads as tone-deaf and often gets reported.
+_COMPLAINT_RE = re.compile(
+    r"(phốt|phot|tố cáo|to cao|lừa đảo|lua dao|bị lừa|bi lua|"
+    r"từ chối|tu choi|hoàn tiền|hoan tien|trả hàng|tra hang|"
+    r"không giống|khong giong|k giống|khác màu|khac mau|hàng lỗi|hang loi|"
+    r"bực mình|buc minh|bức xúc|buc xuc|chửi|chui|đừng mua|dung mua)", re.I)
+
 
 def is_buyer_post(text):
     """Strict gate for outreach: an explicit ask in a sentence that names a product.
@@ -193,7 +201,7 @@ def is_buyer_post(text):
     passing (for example a chart post).
     """
     t = text or ""
-    if _SELLER_RE.search(t):
+    if _SELLER_RE.search(t) or _COMPLAINT_RE.search(t):
         return False
     for sentence in re.split(r"[\n.!?。！？]+", t):
         if _BUYER_RE.search(sentence) and detect_family(sentence):

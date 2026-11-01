@@ -42,6 +42,13 @@ class BuyerGate(unittest.TestCase):
         ]:
             self.assertFalse(outreach.is_buyer_post(text), text)
 
+    def test_complaints_about_another_seller_are_rejected(self):
+        # Advertising under someone's bad-experience post reads as tone-deaf.
+        text = ("Em mua len bên fb e mua theo sỉ, shop từ chối hoàn. "
+                "Tiện thể mọi người hỏi ai bán màu len 48 sáng như dưới ko ạ")
+        self.assertFalse(outreach.is_buyer_post(text))
+        self.assertFalse(outreach.is_buyer_post("Cần tìm len nhưng shop cũ lừa đảo, đừng mua"))
+
 
 class ProductChoice(unittest.TestCase):
     def test_yarn_buyer_never_gets_a_doll_or_hook(self):
