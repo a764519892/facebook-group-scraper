@@ -116,6 +116,12 @@ class Sending(unittest.TestCase):
         self.assertEqual(record["attempts"], 2)
         self.assertNotIn("123:7", outreach.load_state()["commented"])
 
+    def test_success_clears_the_failure_counter(self):
+        outreach.record_failure("123:8", "no send button")
+        self.assertIn("123:8", outreach.load_state()["failed"])
+        outreach.record_success("123:8", {"url": "u", "product": PRODUCTS[0]}, "ok")
+        self.assertNotIn("123:8", outreach.load_state()["failed"])
+
     def test_answered_posts_are_not_returned_again(self):
         settings = current_settings()
         post = {"group": "g", "post_id": "1", "url": "u", "focus_hits": ["len"],

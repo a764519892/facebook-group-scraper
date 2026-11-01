@@ -290,6 +290,7 @@ def record_success(key, post, reply):
         "product": (post.get("product") or {}).get("name", ""),
         "reply": reply,
     }
+    state["failed"].pop(key, None)
     day = date.today().isoformat()
     state["daily"][day] = int(state["daily"].get(day, 0)) + 1
     save_state(state)
