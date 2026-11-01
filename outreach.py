@@ -233,6 +233,8 @@ def candidates(settings, products=None, days=None):
     days = int(days or settings.get("AUTO_REPLY_DAYS") or 7)
     state = load_state()
     done = state["commented"]
+    failed = state.get("failed", {})
+    max_attempts = max(1, int(settings.get("AUTO_REPLY_MAX_ATTEMPTS") or 3))
     seen_text = set()
     out = []
     report = analytics.leads(settings, days=days, limit=500)
@@ -249,6 +251,9 @@ def candidates(settings, products=None, days=None):
             continue
         key = post.get("review_key") or analytics.review_key(post.get("group"), post.get("post_id"))
         if not key or key in done:
+            continue
+        record = failed.get(key) or {}
+        if int(record.get("attempts") or 0) >= max_attempts:
             continue
         fingerprint = _dedupe_key(text)[:400]
         if fingerprint and fingerprint in seen_text:
@@ -284,7 +289,12 @@ def record_success(key, post, reply):
 
 def record_failure(key, error):
     state = load_state()
-    state["failed"][key] = {"at": datetime.now().isoformat(timespec="seconds"), "error": str(error)[:300]}
+    old = state["failed"].get(key) or {}
+    state["failed"][key] = {
+        "at": datetime.now().isoformat(timespec="seconds"),
+        "attempts": int(old.get("attempts") or 0) + 1,
+        "error": str(error)[:300],
+    }
     save_state(state)
 
 
@@ -321,21 +331,29 @@ def _find_box(page):
 
 
 def _click_send(page):
-    """Click the submit button that belongs to the comment editor."""
+    """Click the submit button that belongs to the comment editor.
+
+    Facebook has used several shapes for this button (text "Bình luận"/"Đăng",
+    an icon with only aria-label="Gửi", or aria-disabled="false"). Walk up from
+    the editor and accept all of them.
+    """
     return page.evaluate("""() => {
       const boxes = [...document.querySelectorAll(
         "div[role='textbox'][contenteditable='true'], [contenteditable='true'][role='textbox']"
       )].filter(e => e.offsetParent);
       const box = boxes[boxes.length - 1];
       if (!box) return false;
+      const label = b => ((b.getAttribute('aria-label') || '') + ' ' + (b.innerText || '')).trim();
+      const isSend = b => /^(bình luận|binh luan|comment|đăng|dang|post|gửi|gui|send|trả lời|reply)$/i
+        .test(label(b)) || /(đăng bình luận|post comment|gửi bình luận)/i.test(label(b));
       let root = box;
-      for (let i = 0; i < 7 && root; i++) {
+      for (let i = 0; i < 10 && root; i++) {
         root = root.parentElement;
         if (!root) break;
-        const buttons = [...root.querySelectorAll("div[role='button'], button")]
-          .filter(b => b.offsetParent && !b.getAttribute('aria-disabled'));
-        const hit = buttons.find(b => /^(bình luận|comment|đăng|post)$/i.test(
-          (b.getAttribute('aria-label') || b.innerText || '').trim()));
+        const buttons = [...root.querySelectorAll("div[role='button'], button, [role='button']")]
+          .filter(b => b.offsetParent && b !== box)
+          .filter(b => (b.getAttribute('aria-disabled') || 'false') !== 'true');
+        const hit = buttons.find(isSend);
         if (hit) { hit.click(); return true; }
       }
       return false;
@@ -364,7 +382,10 @@ def post_comment(page, url, text):
     page.keyboard.insert_text(text)
     time.sleep(random.uniform(0.8, 1.5))
     if not _click_send(page):
-        return False, "no send button"
+        # Facebook's comment box also submits on Enter; this covers icon-only
+        # send buttons that have no readable label.
+        page.keyboard.press("Enter")
+        time.sleep(random.uniform(1.0, 2.0))
     time.sleep(random.uniform(4.0, 6.5))
     if _blocked(page):
         return False, "Facebook login/checkpoint"

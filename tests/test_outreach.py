@@ -5,6 +5,7 @@ import unittest
 from unittest.mock import patch
 
 import tests  # noqa: F401
+import analytics
 import outreach
 from config import current_settings
 
@@ -100,6 +101,23 @@ class Sending(unittest.TestCase):
         self.assertEqual(outreach.today_count(state), 1)
         outreach.record_failure("123:1000", "no comment box")
         self.assertIn("123:1000", outreach.load_state()["failed"])
+
+    def test_failed_attempts_are_counted_and_capped(self):
+        outreach.record_failure("123:7", "no send button")
+        outreach.record_failure("123:7", "no send button")
+        record = outreach.load_state()["failed"]["123:7"]
+        self.assertEqual(record["attempts"], 2)
+        self.assertNotIn("123:7", outreach.load_state()["commented"])
+
+    def test_answered_posts_are_not_returned_again(self):
+        settings = current_settings()
+        post = {"group": "g", "post_id": "1", "url": "u", "focus_hits": ["len"],
+                "text": "Mình cần 30 cuộn len nhung ạ", "score": 1, "scraped_at": "", "review_key": "g:1"}
+        with patch.object(analytics, "leads", return_value={"posts": [post]}), \
+                patch.object(outreach, "load_products", return_value=PRODUCTS):
+            self.assertEqual(len(outreach.candidates(settings, PRODUCTS)), 1)
+            outreach.record_success("g:1", post, "sent")
+            self.assertEqual(outreach.candidates(settings, PRODUCTS), [])
 
     def test_preview_never_posts(self):
         settings = current_settings()
