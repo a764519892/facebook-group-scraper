@@ -100,11 +100,18 @@ EXTRACT_JS = r"""
   // layouts render it as a photo/feedback link instead. Pull the numeric post
   // id from every shape we know about, so "Open original post" still works.
   function idFromHref(href) {
-    let m = href.match(/\/(?:posts|permalink)\/(\d+)/);
+    // Path-based ids are the most reliable (the post's own permalink).
+    let m = href.match(/\/(?:posts|permalink|reel|videos)\/(\d+)/);
     if (m) return m[1];
+    // "set=pcb.<id>" / "set=gm.<id>" is the containing post for a photo/reel.
+    m = href.match(/[?&]set=(?:gm|pcb)\.(\d+)/);
+    if (m) return m[1];
+    // story_fbid/multi_permalinks are post ids too.
     m = href.match(/[?&](?:story_fbid|multi_permalinks)=(\d+)/);
     if (m) return m[1];
-    m = href.match(/[?&]set=(?:gm|pcb)\.(\d+)/);
+    // fbid/v are usually photo/video ids, not post ids; only use them as a
+    // last resort when nothing else is available.
+    m = href.match(/[?&](?:fbid|v)=(\d+)/);
     if (m) return m[1];
     return null;
   }
@@ -130,8 +137,8 @@ EXTRACT_JS = r"""
 
     const anchors = Array.from(p.querySelectorAll("a[href]"))
       .filter(a => notInComment(a, p));
-    const postLink = anchors.find(a => /\/(?:posts|permalink)\/\d+/.test(a.href));
-    let postId = postLink ? postLink.href.match(/\/(?:posts|permalink)\/(\d+)/)[1] : null;
+    const postLink = anchors.find(a => /\/(?:posts|permalink|reel|videos)\/\d+/.test(a.href));
+    let postId = postLink ? postLink.href.match(/\/(?:posts|permalink|reel|videos)\/(\d+)/)[1] : null;
     if (!postId) {
       for (const a of anchors) {
         const hit = idFromHref(a.href);
@@ -139,9 +146,14 @@ EXTRACT_JS = r"""
       }
     }
     if (!postId) postId = idFromAttrs(p);
+    function looksLikeTime(s) {
+      s = (s || "").trim();
+      if (!s || s.length > 32) return false;
+      return /(giờ|phút|tiếng|min|hr|h\b|ngày|day|week|tuần|tháng|month|năm|year|just now|vừa xong|hôm qua|yesterday|second|giây)/i.test(s)
+          || /^\d{1,2}\s*(h|m|d|w|y|s)\b/i.test(s);
+    }
     const timeLink = postLink || anchors.find(a =>
-      /^(\d|hôm qua|yesterday|just now|vừa xong)/i.test(
-        (a.getAttribute("aria-label") || a.innerText || "").trim()));
+      looksLikeTime(a.getAttribute("aria-label") || a.innerText || ""));
 
     const authorEl = p.querySelector("h2 a, h3 a, h2 strong, h3 strong");
 
@@ -445,7 +457,10 @@ def wait(seconds, status, message, state="running"):
 def post_key(post):
     if post.get("post_id"):
         return str(post["post_id"])
-    seed = "\x1f".join((post.get("author", ""), post.get("time_text", ""), post.get("text", "")))
+    # Hash-keyed fallback for posts without a numeric id. Time text is
+    # deliberately excluded: Facebook obfuscates it per request, so including
+    # it made the same post hash to a different key on every run.
+    seed = "\x1f".join((post.get("author", ""), (post.get("text", "") or "")[:300]))
     return "h_" + hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16]
 
 
